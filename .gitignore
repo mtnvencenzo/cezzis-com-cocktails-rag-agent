@@ -67,3 +67,6 @@ node_modules/
 
 #Dapr
 /**/.dapr/logs/
+
+# Python virtual host environments
+/**/py-env/

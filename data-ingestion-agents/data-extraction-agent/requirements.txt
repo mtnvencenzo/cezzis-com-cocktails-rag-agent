@@ -1,0 +1,22 @@
+# ==============================================================================
+# Requirements for data extraction agent
+# ==============================================================================
+# Prerequisites:
+# ------------------------------------------------------------------------------
+# Install pip if not already installed:
+# sudo apt install python3-pip
+#
+# Create a virtual environment (for package isoation from system-wide packages):
+# Install venv module if not already installed:
+#
+# sudo apt install python3.12-venv
+# python3 -m venv py-env
+# source py-env/bin/activate
+#
+# ==============================================================================
+# Required packages: make install
+# ==============================================================================
+#
+# Azure Cosmos DB SDK
+azure-cosmos==4.14.0
+azure-identity==1.25.1
