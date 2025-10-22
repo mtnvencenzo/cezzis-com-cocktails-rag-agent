@@ -1,0 +1,21 @@
+{
+    "dotnet.defaultSolution": "disable",
+    "makefile.configureOnOpen": false,
+    "rest-client.enableTelemetry": false,
+    "yaml.schemas": {
+        "https://raw.githubusercontent.com/GitTools/GitVersion/main/schemas/6.3/GitVersion.json": "GitVersion.yml"
+    },
+    "explorer.fileNesting.enabled": true,
+    "explorer.fileNesting.patterns": {
+      "*.py": "$(capture).py.http, $(capture)_test.py"
+    },
+    "files.watcherExclude": {
+        "**/.git/objects/**": true,
+        "**/.git/subtree-cache/**": true,
+        "**/node_modules/**": true,
+        "**/.venv/**": true,
+        "**/py-env/**": true
+    },
+    "python-envs.defaultEnvManager": "ms-python.python:venv",
+    "python-envs.pythonProjects": []
+}
