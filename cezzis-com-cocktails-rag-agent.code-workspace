@@ -1,0 +1,14 @@
+{
+	"folders": [
+		{
+			"path": "./data-ingestion-agents/data-extraction-agent"
+		}
+	],
+	"settings": {
+		"dotnet.defaultSolution": "disable",
+		"yaml.schemas": {
+			"https://raw.githubusercontent.com/GitTools/GitVersion/main/schemas/6.3/GitVersion.json": "GitVersion.yml"
+		},
+		"python-envs.defaultEnvManager": "ms-python.python:venv"
+	}
+}

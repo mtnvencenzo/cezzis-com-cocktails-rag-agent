@@ -7,12 +7,15 @@
     },
     "explorer.fileNesting.enabled": true,
     "explorer.fileNesting.patterns": {
-      "*.go": "$(capture).py.http, $(capture)_test.py"
+      "*.py": "$(capture).py.http, $(capture)_test.py"
     },
     "files.watcherExclude": {
         "**/.git/objects/**": true,
         "**/.git/subtree-cache/**": true,
         "**/node_modules/**": true,
+        "**/.venv/**": true,
         "**/py-env/**": true
-    }
+    },
+    "python-envs.defaultEnvManager": "ms-python.python:venv",
+    "python-envs.pythonProjects": []
 }
