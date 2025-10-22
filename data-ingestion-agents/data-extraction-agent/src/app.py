@@ -1,3 +1,4 @@
+import os
 import sys
 
 from azure.core.exceptions import AzureError
@@ -21,8 +22,11 @@ if not settings.cosmos_container_name:
 client: CosmosClient
 
 if (settings.cosmos_connection_string):
-    # only used for development purposes when using the emulator
-    urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+    # Disablinge insecure request warnings for local development
+    # For usage with the Cosmos DB Emulator
+    if os.environ.get("ENV") == "local":
+        urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
     try:
         client = CosmosClient.from_connection_string(settings.cosmos_connection_string, None, None) # type: ignore
     except AzureError as e:
