@@ -1,4 +1,3 @@
-import os
 import sys
 
 from azure.core.exceptions import AzureError
@@ -8,9 +7,6 @@ import urllib3
 from app_settings import AppSettings
 
 settings = AppSettings()
-
-env = os.environ.get("ENV")
-
 
 # Validate required configuration
 if not settings.cosmos_account_endpoint:
@@ -26,7 +22,7 @@ client: CosmosClient
 
 if (settings.cosmos_connection_string):
     # only used for development purposes when using the emulator
-    urllib3.disable_warnings() 
+    urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
     try:
         client = CosmosClient.from_connection_string(settings.cosmos_connection_string, None, None) # type: ignore
     except AzureError as e:
