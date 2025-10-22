@@ -15,7 +15,7 @@ class AppSettings(BaseSettings):
         default="",
         validation_alias='COSMOS_DATABASE_NAME'
     )
-    cosmos_connectinon_string: str = Field(
+    cosmos_connection_string: str = Field(
         default="",
         validation_alias='COSMOS_CONNECTION_STRING'
     )

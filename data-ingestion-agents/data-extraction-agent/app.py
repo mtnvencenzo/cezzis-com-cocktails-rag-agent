@@ -20,11 +20,11 @@ if not settings.cosmos_container_name:
 # Initialize Cosmos DB client with error handling
 client: CosmosClient
 
-if (settings.cosmos_connectinon_string):
+if (settings.cosmos_connection_string):
     # only used for development purposes when using the emulator
     urllib3.disable_warnings() 
     try:
-        client = CosmosClient.from_connection_string(settings.cosmos_connectinon_string, None, None) # type: ignore
+        client = CosmosClient.from_connection_string(settings.cosmos_connection_string, None, None) # type: ignore
     except AzureError as e:
         print(f"Failed to initialize Cosmos DB client from connection string: {e}", file=sys.stderr)
         sys.exit(1)
