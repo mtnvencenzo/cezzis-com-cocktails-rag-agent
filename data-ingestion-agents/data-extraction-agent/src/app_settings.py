@@ -1,9 +1,11 @@
+import os
+
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class AppSettings(BaseSettings):
     model_config = SettingsConfigDict(
-        env_file=('.env', '.env.local'),
+        env_file=('.env', f'.env.{os.environ.get("ENV")}'),
         env_file_encoding="utf-8"
     )
 

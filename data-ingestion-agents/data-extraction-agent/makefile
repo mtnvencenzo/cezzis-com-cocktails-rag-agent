@@ -4,4 +4,4 @@ install:
 	pip install -r requirements.txt
 
 run:
-	python3 app.py
+	cd src && ENV="local" python3 app.py

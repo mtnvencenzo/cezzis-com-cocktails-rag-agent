@@ -1,3 +1,4 @@
+import os
 import sys
 
 from azure.core.exceptions import AzureError
@@ -7,6 +8,9 @@ import urllib3
 from app_settings import AppSettings
 
 settings = AppSettings()
+
+env = os.environ.get("ENV")
+
 
 # Validate required configuration
 if not settings.cosmos_account_endpoint:
