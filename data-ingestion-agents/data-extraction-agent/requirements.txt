@@ -25,3 +25,6 @@ azure-identity==1.25.1
 # Common packages
 pydantic-settings==2.11.0
 urllib3==2.5.0
+
+# Api Client Generation
+openapi-python-client==0.26.2
