@@ -2,7 +2,7 @@
 	"folders": [
 		{
 			"name": "data-extraction-agent",
-			"path": "data-ingestion-agents/data-extraction-agent"
+			"path": "data-ingestion/data-extraction-agent"
 		}
 	],
 	"settings": {
