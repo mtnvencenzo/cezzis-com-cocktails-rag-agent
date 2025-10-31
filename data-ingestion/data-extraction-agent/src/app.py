@@ -1,49 +1,59 @@
-import sys
+import atexit
 
 # from app_settings import settings
-from cocktails_api.cocktails_api_client.client import Client
-from cocktails_api.cocktails_api_client.models.cocktail_rs import CocktailRs
-from cosmos_client import get_cosmos_client, initialize_database
+from confluent_kafka import Consumer, KafkaError
+from app_settings import settings
 
-# Initialize Cosmos DB client with error handling
-cosmos_client = get_cosmos_client()
+consumer: Consumer | None = None
 
-if not cosmos_client:
-    print("Cosmos DB client is not initialized.", file=sys.stderr)
-    sys.exit(1)
-
-print("Cosmos DB client initialized successfully.")
+def main():
+    print("Starting Kafka consumer")
 
 
-[database, container] = initialize_database(cosmos_client)
 
-if database and container:
-    print(f"Connected to database: {database.id}, container: {container.id}")
-else:
-    print("Failed to connect to the database or container.", file=sys.stderr)
-    sys.exit(1)
+    # Initialize the kafka consumer to read messages from 'cocktails-topic'
+    # Registering atexit handler to ensure proper cleanup on exit
+    consumer = Consumer({
+        'bootstrap.servers': settings.bootstrap_servers,
+        'group.id': settings.consumer_group,
+        'auto.offset.reset': 'earliest'
+    })
+
+    print(f"Subscribing to '{settings.topic_name}'")
+
+    consumer.subscribe([settings.topic_name])
+
+    print("Polling for messages...")
+
+    while True:
+        msg = consumer.poll(1.0)
+
+        if ( msg is None):
+            continue
+        elif msg.error():
+            error = msg.error()
+            if error is not None and error.code() == KafkaError._PARTITION_EOF:
+                print('End of partition reached {0}/{1}'.format(msg.topic(), msg.partition()))
+            else:
+                print("Consumer error: {}".format(error))
+            continue
+
+        else:
+            value = msg.value()
+
+            if value is not None:
+                print('Received message: {}'.format(value.decode('utf-8')))
+            else:
+                print("Received message with no value")
+
+def cleanup():
+    print("Performing cleanup before exit.")
+    if consumer is not None:
+        consumer.close()
+
+if __name__ == "__main__":
+    atexit.register(cleanup)
+    main()
 
 
-api_client = Client(base_url="https://api.cezzis.com/prd/cocktails")
 
-# ...existing code...
-
-from cocktails_api.cocktails_api_client.api.cocktails.get_cocktail import sync_detailed
-
-# Example: Retrieve a cocktail by ID
-response = sync_detailed(
-    client=api_client,
-    id="pegu-club",
-    x_key="x361#{=j]@m3d><oi#3t4a5z"
-)
-
-if response.status_code == 200:
-    cocktail_data = response.parsed
-
-    if (cocktail_data is not None) and isinstance(cocktail_data, CocktailRs):
-        print("Cocktail retrieved successfully:")
-        print("ID:", cocktail_data.item.id)
-        print("Title:", cocktail_data.item.descriptive_title)
-
-else:
-    print("Failed to retrieve cocktail:", response.status_code)

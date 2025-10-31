@@ -9,34 +9,27 @@ class AppSettings(BaseSettings):
         env_file_encoding="utf-8"
     )
 
-    cosmos_account_endpoint: str = Field(
+    bootstrap_servers: str = Field(
         default="",
-        validation_alias='COSMOS_ACCOUNT_ENDPOINT'
+        validation_alias='KAFKA_BOOTSTRAP_SERVERS'
     )
-    cosmos_database_name: str = Field(
+    consumer_group: str = Field(
         default="",
-        validation_alias='COSMOS_DATABASE_NAME'
+        validation_alias='KAFKA_CONSUMER_GROUP'
     )
-    cosmos_connection_string: str = Field(
+    topic_name: str = Field(
         default="",
-        validation_alias='COSMOS_CONNECTION_STRING'
-    )
-    cosmos_container_name: str = Field(
-        default="",
-        validation_alias='COSMOS_CONTAINER_NAME'
+        validation_alias='KAFKA_TOPIC_NAME'
     )
 
 settings = AppSettings()
 
 # Validate required configuration
-if not settings.cosmos_account_endpoint and not settings.cosmos_connection_string:
-    raise ValueError("COSMOS_ACCOUNT_ENDPOINT or COSMOS_CONNECTION_STRING environment variable is required")
-if not settings.cosmos_database_name:
-    raise ValueError("COSMOS_DATABASE_NAME environment variable is required")
-if not settings.cosmos_container_name:
-    raise ValueError("COSMOS_CONTAINER_NAME environment variable is required")
-
-def is_local_environment() -> bool:
-    return os.environ.get("ENV") == "local"
+if not settings.bootstrap_servers:
+    raise ValueError("KAFKA_BOOTSTRAP_SERVERS environment variable is required")
+if not settings.consumer_group:
+    raise ValueError("KAFKA_CONSUMER_GROUP environment variable is required")
+if not settings.topic_name:
+    raise ValueError("KAFKA_TOPIC_NAME environment variable is required")
 
 print("App settings loaded successfully.")

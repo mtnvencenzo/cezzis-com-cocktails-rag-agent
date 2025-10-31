@@ -17,14 +17,9 @@
 # ==============================================================================
 # Required packages: make install
 # ==============================================================================
-# Azure Cosmos DB SDK
-azure-core==1.36.0
-azure-cosmos==4.14.0
-azure-identity==1.25.1
-
 # Common packages
 pydantic-settings==2.11.0
-urllib3==2.5.0
 
-# Api Client Generation
-openapi-python-client==0.26.2
+# Kafka Client
+confluent-kafka==2.12.1
+types-confluent_kafka==1.3.6
