@@ -1,21 +1,21 @@
-name: cicd-cezzis-rag-data-ingestion
+name: cicd-cezzis-rag-data-extraction
 
 on:
   pull_request:
     branches: [main]
     paths: [
-      data-extraction-agent/src/**,
-      data-extraction-agent/terraform/**,
-      data-extraction-agent/test/**,
-      .github/workflows/cezzis-rag-data-ingestion-cicd.yaml
+      data-ingestion/data-extraction-agent/src/**,
+      data-ingestion/data-extraction-agent/terraform/**,
+      data-ingestion/data-extraction-agent/test/**,
+      .github/workflows/cezzis-rag-data-extraction-cicd.yaml
     ]
   push:
     branches: [main]
     paths: [
-      data-extraction-agent/src/**,
-      data-extraction-agent/terraform/**,
-      data-extraction-agent/test/**,
-      .github/workflows/cezzis-rag-data-ingestion-cicd.yaml
+      data-ingestion/data-extraction-agent/src/**,
+      data-ingestion/data-extraction-agent/terraform/**,
+      data-ingestion/data-extraction-agent/test/**,
+      .github/workflows/cezzis-rag-data-extraction-cicd.yaml
     ]
 
   workflow_dispatch:
@@ -50,12 +50,14 @@ jobs:
     needs: [gitVersion]
     uses: mtnvencenzo/workflows/.github/workflows/python-build.yaml@main
     with:
-      working_directory: './data-ingestion-agent'
-      python_version: '3.x'
+      python_version: '3.12'
+      working_directory: './data-extraction-agent'
       requirements_file: './requirements.txt'
-      artifact_name: 'cocktails-api'
+      ruff_config: '.ruff.toml'
+      pytest_args: '-v'
+      upload_artifact: true
+      artifact_name: 'cocktails-rag-data-extraction-agent'
       setup_files: '["./Dockerfile-CI"]'
-      publish_directory_name: 'publish'
       version: ${{ needs.gitVersion.outputs.semVer }}
     secrets:
       github_packages_pat_token: ${{ secrets.GH_PACKAGES_PAT_TOKEN_READ }}
@@ -65,13 +67,13 @@ jobs:
     needs: [build, gitVersion]
     uses: mtnvencenzo/workflows/.github/workflows/docker-build-and-push.yaml@main
     with:
-      working_directory: './data-ingestion-agent'
+      working_directory: './data-extraction-agent'
       allow_build_and_push: ${{ (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref_name == 'main' }}
-      artifact_name: 'cocktails-rag-data-ingestion-agent'
+      artifact_name: 'cocktails-rag-data-extraction-agent'
       docker_file_name: 'Dockerfile-CI'
       image_tag: '${{ github.sha }}'
       acr_registry_login_server: 'acrveceusgloshared001.azurecr.io'
-      acr_image_repository: 'cocktailsragdataingestionagent'
+      acr_image_repository: 'cocktailsragdataextractionagent'
 
     secrets:
       acr_registry_login_username: ${{ secrets.ACR_REGISTRY_USERNAME }}
@@ -83,7 +85,7 @@ jobs:
     permissions:
       contents: write
     runs-on: ubuntu-latest
-    needs: [docker, gitVersion, terraform_deploy_prd]
+    needs: [docker, gitVersion]
     steps:
       - name: Create release
         uses: mtnvencenzo/workflows/.github/actions/create-release@main
