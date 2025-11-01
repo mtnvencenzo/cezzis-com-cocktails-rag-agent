@@ -12,6 +12,7 @@ from app_settings import settings
 consumer: Consumer | None = None
 shutdown_requested = False
 
+
 def signal_handler(signum: int, _frame: Optional[FrameType]) -> None:
     """Handle shutdown signals gracefully.
 
@@ -22,6 +23,7 @@ def signal_handler(signum: int, _frame: Optional[FrameType]) -> None:
     global shutdown_requested
     print(f"\nShutdown signal received ({signum}), exiting gracefully...")
     shutdown_requested = True
+
 
 def main() -> None:
     """Main function to run the Kafka consumer."""
@@ -94,7 +96,7 @@ def cleanup() -> None:
     """Cleanup function to close the Kafka consumer."""
     print("Performing cleanup before exit.")
     global consumer
-    
+
     if consumer is not None:
         try:
             consumer.commit()
@@ -102,6 +104,7 @@ def cleanup() -> None:
             print(f"Error committing offsets: {e}")
 
         consumer.close()
+
 
 if __name__ == "__main__":
     atexit.register(cleanup)
