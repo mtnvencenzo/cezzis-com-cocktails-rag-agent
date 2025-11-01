@@ -243,6 +243,7 @@ class TestMain:
     ) -> None:
         """Test that main exits when topic subscription fails."""
         import app
+
         mocker.patch("app.signal.signal")
         mock_consumer.subscribe.side_effect = Exception("Subscription failed")
 
