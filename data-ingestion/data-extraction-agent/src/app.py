@@ -93,7 +93,14 @@ def main() -> None:
 def cleanup() -> None:
     """Cleanup function to close the Kafka consumer."""
     print("Performing cleanup before exit.")
+    global consumer
+    
     if consumer is not None:
+        try:
+            consumer.commit()
+        except Exception as e:
+            print(f"Error committing offsets: {e}")
+
         consumer.close()
 
 if __name__ == "__main__":
