@@ -13,12 +13,20 @@ consumer: Consumer | None = None
 shutdown_requested = False
 
 def signal_handler(signum: int, _frame: Optional[FrameType]) -> None:
+    """Handle shutdown signals gracefully.
+
+    Args:
+        signum (int): The signal number.
+        _frame (Optional[FrameType]): The current stack frame (unused).
+    """
     global shutdown_requested
     print(f"\nShutdown signal received ({signum}), exiting gracefully...")
     shutdown_requested = True
 
-
 def main() -> None:
+    """Main function to run the Kafka consumer."""
+    global shutdown_requested
+
     # In main(), before the loop:
     signal.signal(signal.SIGINT, signal_handler)
     signal.signal(signal.SIGTERM, signal_handler)
@@ -83,6 +91,7 @@ def main() -> None:
 
 
 def cleanup() -> None:
+    """Cleanup function to close the Kafka consumer."""
     print("Performing cleanup before exit.")
     if consumer is not None:
         consumer.close()
