@@ -23,5 +23,13 @@
             "envManager": "ms-python.python:venv",
             "packageManager": "ms-python.python:pip"
         }
-    ]
+    ],
+    // "[python]": {
+    //     "editor.formatOnSave": true,
+    //     "editor.defaultFormatter": "charliermarsh.ruff",
+    //     "editor.codeActionsOnSave": {
+    //         "source.fixAll.ruff": "explicit",
+    //         "source.organizeImports.ruff": "explicit"
+    //     }
+    // }
 }

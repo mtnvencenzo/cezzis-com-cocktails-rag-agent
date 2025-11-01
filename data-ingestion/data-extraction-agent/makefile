@@ -13,3 +13,6 @@ api-client:
 		--output-path ./cocktails_api \
 		--config ./cocktails_api/cocktails_api.yaml \
 		--overwrite
+
+standards:
+	ruff check --fix . --config .ruff.toml
