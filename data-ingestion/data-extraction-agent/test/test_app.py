@@ -73,7 +73,7 @@ class TestSignalHandler:
         assert app.shutdown_requested is True
 
     def test_signal_handler_prints_message(
-        self, reset_app_globals: Any, mocker: MockerFixture, capsys: Any
+        self, reset_app_globals: Any, capsys: Any
     ) -> None:
         """Test that signal_handler prints shutdown message."""
         import app
@@ -152,7 +152,7 @@ class TestMain:
     """Test suite for main function."""
 
     def test_main_creates_consumer_with_correct_config(
-        self, reset_app_globals: Any, mock_settings: Mock, mocker: MockerFixture
+        self, reset_app_globals: Any, mocker: MockerFixture
     ) -> None:
         """Test that main creates consumer with correct configuration."""
         import app
@@ -182,7 +182,6 @@ class TestMain:
     def test_main_subscribes_to_topic(
         self,
         reset_app_globals: Any,
-        mock_settings: Mock,
         mock_consumer: Mock,
         mocker: MockerFixture,
     ) -> None:
@@ -199,7 +198,6 @@ class TestMain:
     def test_main_registers_signal_handlers(
         self,
         reset_app_globals: Any,
-        mock_settings: Mock,
         mock_consumer: Mock,
         mocker: MockerFixture,
     ) -> None:
@@ -218,7 +216,6 @@ class TestMain:
     def test_main_exits_on_consumer_creation_error(
         self,
         reset_app_globals: Any,
-        mock_settings: Mock,
         mocker: MockerFixture,
         capsys: Any,
     ) -> None:
@@ -240,14 +237,12 @@ class TestMain:
     def test_main_exits_on_subscription_error(
         self,
         reset_app_globals: Any,
-        mock_settings: Mock,
         mock_consumer: Mock,
         mocker: MockerFixture,
         capsys: Any,
     ) -> None:
         """Test that main exits when topic subscription fails."""
         import app
-
         mocker.patch("app.signal.signal")
         mock_consumer.subscribe.side_effect = Exception("Subscription failed")
 
@@ -302,11 +297,10 @@ class TestMain:
     def test_main_handles_none_message(
         self,
         reset_app_globals: Any,
-        mock_settings: Mock,
         mock_consumer: Mock,
         mocker: MockerFixture,
     ) -> None:
-        """Test that main handles None messages from poll."""
+        """Test that main handles None messages without error."""
         import app
 
         mocker.patch("app.signal.signal")
@@ -331,12 +325,11 @@ class TestMain:
     def test_main_handles_partition_eof_error(
         self,
         reset_app_globals: Any,
-        mock_settings: Mock,
         mock_consumer: Mock,
         mocker: MockerFixture,
         capsys: Any,
     ) -> None:
-        """Test that main handles PARTITION_EOF error."""
+        """Test that main handles partition EOF errors."""
         import app
 
         mocker.patch("app.signal.signal")
@@ -370,12 +363,11 @@ class TestMain:
     def test_main_handles_kafka_error(
         self,
         reset_app_globals: Any,
-        mock_settings: Mock,
         mock_consumer: Mock,
         mocker: MockerFixture,
         capsys: Any,
     ) -> None:
-        """Test that main handles Kafka errors."""
+        """Test that main handles Kafka errors in messages."""
         import app
 
         mocker.patch("app.signal.signal")
@@ -407,12 +399,11 @@ class TestMain:
     def test_main_handles_message_with_no_value(
         self,
         reset_app_globals: Any,
-        mock_settings: Mock,
         mock_consumer: Mock,
         mocker: MockerFixture,
         capsys: Any,
     ) -> None:
-        """Test that main handles messages with None value."""
+        """Test that main handles messages with no value."""
         import app
 
         mocker.patch("app.signal.signal")
@@ -443,7 +434,6 @@ class TestMain:
     def test_main_prints_startup_messages(
         self,
         reset_app_globals: Any,
-        mock_settings: Mock,
         mock_consumer: Mock,
         mocker: MockerFixture,
         capsys: Any,
