@@ -14,9 +14,13 @@
         "**/.git/subtree-cache/**": true,
         "**/node_modules/**": true,
         "**/.venv/**": true,
-        "**/py-env/**": true
+        "**/py-env/**": true,
+        "**/.pytest_cache/**": true,
+        "**/.ruff_cache/**": true
     },
     "python-envs.defaultEnvManager": "ms-python.python:venv",
+    // "python.defaultInterpreterPath": ".venv/Scripts/python.exe", // Adjust path for macOS/Linux if needed
+    // "python.terminal.activateEnvironment": true,
     "python-envs.pythonProjects": [
         {
             "path": "",

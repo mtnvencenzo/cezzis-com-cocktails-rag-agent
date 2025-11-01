@@ -49,6 +49,11 @@ unfixable = []
 # Allow unused variables when underscore-prefixed.
 dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
 
+[lint.per-file-ignores]
+# Ignore unused imports (F401) in test files - some imports trigger side effects
+"test_*.py" = ["F401"]
+"**/test_*.py" = ["F401"]
+
 [format]
 # Like Black, use double quotes for strings.
 quote-style = "double"
