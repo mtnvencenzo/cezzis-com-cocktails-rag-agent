@@ -51,7 +51,7 @@ jobs:
     uses: mtnvencenzo/workflows/.github/workflows/python-build.yaml@main
     with:
       python_version: '3.12'
-      working_directory: './data-extraction-agent'
+      working_directory: './data-ingestion/data-extraction-agent'
       requirements_file: 'requirements.txt'
       requirements_dev_file: 'requirements-dev.txt'
       ruff_config: '.ruff.toml'
@@ -68,7 +68,7 @@ jobs:
     needs: [build, gitVersion]
     uses: mtnvencenzo/workflows/.github/workflows/docker-build-and-push.yaml@main
     with:
-      working_directory: './data-extraction-agent'
+      working_directory: './data-ingestion/data-extraction-agent'
       allow_build_and_push: ${{ (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref_name == 'main' }}
       artifact_name: 'cocktails-rag-data-extraction-agent'
       docker_file_name: 'Dockerfile-CI'
