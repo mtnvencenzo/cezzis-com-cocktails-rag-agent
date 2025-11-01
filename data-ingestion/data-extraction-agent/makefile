@@ -1,7 +1,7 @@
 .PHONY: install run test
 
 install:
-	pip install -r requirements.txt
+	pip install -r requirements.txt -r requirements-dev.txt
 
 run:
 	cd src && ENV="local" python3 app.py
