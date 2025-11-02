@@ -1,7 +1,7 @@
-.PHONY: install run
+.PHONY: install run test
 
 install:
-	pip install -r requirements.txt
+	pip install -r requirements.txt -r requirements-dev.txt
 
 run:
 	cd src && ENV="local" python3 app.py
@@ -13,3 +13,18 @@ api-client:
 		--output-path ./cocktails_api \
 		--config ./cocktails_api/cocktails_api.yaml \
 		--overwrite
+
+ruff-check:
+	ruff check --fix . --config .ruff.toml
+
+ruff-format:
+	ruff format . --config .ruff.toml
+
+test:
+	pytest test/
+
+standards:
+	@make ruff-check
+	@echo "Code standards check complete."
+	@make ruff-format
+	@echo "Code formatting complete."

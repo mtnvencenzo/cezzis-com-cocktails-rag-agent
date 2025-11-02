@@ -1,6 +1,10 @@
 {
 	"folders": [
 		{
+			"name": ".github",
+			"path": ".github"
+		},
+		{
 			"name": "data-extraction-agent",
 			"path": "data-ingestion/data-extraction-agent"
 		}
