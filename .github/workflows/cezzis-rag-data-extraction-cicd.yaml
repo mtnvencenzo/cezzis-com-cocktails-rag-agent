@@ -4,17 +4,13 @@ on:
   pull_request:
     branches: [main]
     paths: [
-      data-ingestion/data-extraction-agent/src/**,
-      data-ingestion/data-extraction-agent/terraform/**,
-      data-ingestion/data-extraction-agent/test/**,
+      data-ingestion/data-extraction-agent/**,
       .github/workflows/cezzis-rag-data-extraction-cicd.yaml
     ]
   push:
     branches: [main]
     paths: [
-      data-ingestion/data-extraction-agent/src/**,
-      data-ingestion/data-extraction-agent/terraform/**,
-      data-ingestion/data-extraction-agent/test/**,
+      data-ingestion/data-extraction-agent/**,
       .github/workflows/cezzis-rag-data-extraction-cicd.yaml
     ]
 
