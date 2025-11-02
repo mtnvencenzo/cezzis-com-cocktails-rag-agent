@@ -1,10 +1,12 @@
-.PHONY: install run test
+.PHONY: install run test py-source
 
 install:
 	pip install -r requirements.txt -r requirements-dev.txt
 
 py-source:
-	source .venv/bin/activate
+	. .venv/bin/activate && \
+	export PATH=".venv/bin::PATH" && \
+	exec "$$SHELL"
 
 run:
 	cd src && ENV="local" python3 app.py
