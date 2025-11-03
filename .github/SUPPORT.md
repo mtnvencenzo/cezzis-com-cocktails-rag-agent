@@ -56,7 +56,7 @@ Found a bug? Help us fix it!
 
 ### 📮 How to Report
 
-1. Use our **[Bug Report Template](https://github.com/mtnvencenzo/cezzis-com-cocktails-mcp/issues/new?template=bug_report.md)**
+1. Use our **[Bug Report Template](https://github.com/mtnvencenzo/cezzis-com-cocktails-rag-agent/issues/new?template=bug_report.md)**
 2. Provide detailed information:
    - Steps to reproduce
    - Expected behavior

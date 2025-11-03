@@ -13,20 +13,17 @@ from opentelemetry.sdk.trace.export import BatchSpanProcessor
 from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
 from opentelemetry._logs import set_logger_provider
 from opentelemetry.propagate import extract
-from opentelemetry.exporter.otlp.proto.http._log_exporter import (
-    OTLPLogExporter,
-)
+from opentelemetry.exporter.otlp.proto.http._log_exporter import OTLPLogExporter
 from opentelemetry.sdk._logs import LoggerProvider, LoggingHandler
 from opentelemetry.sdk._logs.export import BatchLogRecordProcessor
 from opentelemetry.trace import Span
 from typing import ContextManager
 from version import __version__
 from app_settings import settings
-from opentelemetry.instrumentation.confluent_kafka import ConfluentKafkaInstrumentor  # type: ignore[import-untyped]
 
 # Define global variables for trace and log providers
-trace_provider: TraceProvider
-log_provider: LoggerProvider
+trace_provider: TraceProvider | None = None 
+log_provider: LoggerProvider | None = None 
 
 def initialize_otel() -> None:
     """Initialize OpenTelemetry tracing and logging."""
@@ -106,7 +103,9 @@ def initialize_logging(resource: Resource) -> None:
 
     # Attach both handlers to root logger
     logging.getLogger().addHandler(otel_handler)
-    logging.getLogger().addHandler(console_handler)
+
+    if os.environ.get("ENV") == "local":
+        logging.getLogger().addHandler(console_handler)
 
 def close() -> None:
     """Shutdown OpenTelemetry providers to flush data."""

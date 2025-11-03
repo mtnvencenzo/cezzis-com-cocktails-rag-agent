@@ -14,7 +14,7 @@ from otel import get_logger, initialize_otel, close as otel_close, create_kafka_
 
 consumer: Consumer | None = None
 shutdown_requested = False
-logger: logging.Logger
+logger: logging.Logger = logging.getLogger(__name__)  
 tracer = trace.get_tracer(__name__)
 
 def signal_handler(signum: int, _frame: Optional[FrameType]) -> None:
@@ -27,7 +27,7 @@ def signal_handler(signum: int, _frame: Optional[FrameType]) -> None:
     global logger
     global shutdown_requested
 
-    logger.info(msg = f"\nShutdown signal received ({signum}), exiting gracefully...")
+    logger.info(f"\nShutdown signal received ({signum}), exiting gracefully...") 
     shutdown_requested = True
 
 def main() -> None:

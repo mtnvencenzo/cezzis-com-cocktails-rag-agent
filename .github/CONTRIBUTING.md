@@ -197,7 +197,7 @@ make test
 ### 📄 Issue Templates
 
 Use our issue chooser:
-- https://github.com/mtnvencenzo/cezzis-com-cocktails-mcp/issues/new/choose
+- https://github.com/mtnvencenzo/cezzis-com-cocktails-rag-agent/issues/new/choose
 
 ### ❓ Common Questions
 
