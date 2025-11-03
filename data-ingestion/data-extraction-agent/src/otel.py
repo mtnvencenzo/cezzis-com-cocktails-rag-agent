@@ -5,17 +5,21 @@ import os
 import socket
 import logging
 
+from confluent_kafka import Message
 from opentelemetry import trace
 from opentelemetry.sdk.trace import TracerProvider as TraceProvider
 from opentelemetry.sdk.resources import Resource
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
 from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
 from opentelemetry._logs import set_logger_provider
+from opentelemetry.propagate import extract
 from opentelemetry.exporter.otlp.proto.http._log_exporter import (
     OTLPLogExporter,
 )
 from opentelemetry.sdk._logs import LoggerProvider, LoggingHandler
 from opentelemetry.sdk._logs.export import BatchLogRecordProcessor
+from opentelemetry.trace import Span
+from typing import ContextManager
 from version import __version__
 from app_settings import settings
 from opentelemetry.instrumentation.confluent_kafka import ConfluentKafkaInstrumentor  # type: ignore[import-untyped]
@@ -104,7 +108,6 @@ def initialize_logging(resource: Resource) -> None:
     logging.getLogger().addHandler(otel_handler)
     logging.getLogger().addHandler(console_handler)
 
-
 def close() -> None:
     """Shutdown OpenTelemetry providers to flush data."""
     global trace_provider
@@ -126,3 +129,47 @@ def get_logger(name: str) -> logging.Logger:
         logging.Logger: The OpenTelemetry-instrumented logger.
     """
     return logging.getLogger(name)
+
+def create_kafka_child_span(tracer: trace.Tracer, span_name: str, msg: Message) -> ContextManager[Span]:
+    """Create a child span for Kafka message processing.
+
+    Args:
+        tracer (trace.Tracer): The OpenTelemetry tracer.
+        span_name (str): The name of the span.
+        msg (Message): The Kafka message object.
+
+    Returns:
+        ContextManager[Span]: A context manager that yields the created child span.
+    """
+    # Extract trace context from Kafka message headers for distributed tracing
+    carrier: dict[str, str] = {}
+    headers = msg.headers()
+    if headers is not None:
+        for key, value in headers:
+            if isinstance(value, bytes):
+                carrier[key] = value.decode('utf-8')
+
+    # Extract parent context and create a span as a child of the API trace
+    parent_context = extract(carrier)
+    
+    # Add Kafka-specific attributes to the span using OpenTelemetry semantic conventions
+    span_attributes: dict[str, str | int] = {
+        "messaging.system": "kafka",
+        "messaging.destination.name": msg.topic() or "unknown",  # Updated to semantic convention
+        "messaging.operation": "process",
+    }
+    
+    # Add optional attributes if available
+    partition = msg.partition()
+    if partition is not None:
+        span_attributes["messaging.kafka.partition"] = partition
+    
+    offset = msg.offset()
+    if offset is not None:
+        span_attributes["messaging.kafka.offset"] = offset
+
+    return tracer.start_as_current_span(
+        span_name,
+        context=parent_context,
+        attributes=span_attributes,
+    )

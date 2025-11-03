@@ -1,4 +1,5 @@
 import atexit
+import json
 import logging
 import signal
 import sys
@@ -8,9 +9,8 @@ from typing import Optional
 # Application specific imports
 from confluent_kafka import Consumer, KafkaError
 from opentelemetry import trace
-from opentelemetry.propagate import extract
 from app_settings import settings
-from otel import get_logger, initialize_otel, close as otel_close
+from otel import get_logger, initialize_otel, close as otel_close, create_kafka_child_span
 
 consumer: Consumer | None = None
 shutdown_requested = False
@@ -92,48 +92,23 @@ def main() -> None:
                 logger.error("Consumer error: {}".format(error))
             continue
         else:
-            # Extract trace context from Kafka message headers for distributed tracing
-            carrier: dict[str, str] = {}
-            headers = msg.headers()
-            if headers is not None:
-                for key, value in headers:
-                    if isinstance(value, bytes):
-                        carrier[key] = value.decode('utf-8')
-            
-            # Extract parent context and create a span as a child of the API trace
-            parent_context = extract(carrier)
-            
-            # Add Kafka-specific attributes to the span using OpenTelemetry semantic conventions
-            span_attributes: dict[str, str | int] = {
-                "messaging.system": "kafka",
-                "messaging.destination.name": msg.topic() or "unknown",  # Updated to semantic convention
-                "messaging.operation": "process",
-            }
-            
-            # Add optional attributes if available
-            partition = msg.partition()
-            if partition is not None:
-                span_attributes["messaging.kafka.partition"] = partition
-            
-            offset = msg.offset()
-            if offset is not None:
-                span_attributes["messaging.kafka.offset"] = offset
-            
-            with tracer.start_as_current_span(
-                "cocktails-message-processing",
-                context=parent_context,
-                attributes=span_attributes,
-            ):
+            # Create a span for processing this Kafka message, linked to the API trace
+            with create_kafka_child_span(tracer, "cocktails-message-processing", msg):
                 try:
                     value = msg.value()
                     if value is not None:
                         decoded_value = value.decode("utf-8")
-                        logger.info(f"Received message: {decoded_value}")
-                        # Add your message processing logic here
+                        json_array = json.loads(decoded_value)
+                        logger.info(f"Received cocktail message with item count: {len(json_array)}")
+
+                        for item in json_array:
+                            logger.info(f"Processing cocktail: {item['Id']}")
+                            # Add your message processing logic here
                     else:
                         logger.warning("Received message with no value")
                 except Exception as e:
                     logger.error(f"Error processing message: {e}", exc_info=True)
+
 
 def cleanup() -> None:
     """Cleanup function to close the Kafka consumer."""
