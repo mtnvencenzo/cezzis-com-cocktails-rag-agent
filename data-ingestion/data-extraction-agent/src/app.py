@@ -9,7 +9,6 @@ from typing import Optional
 from confluent_kafka import Consumer, KafkaError
 from opentelemetry import trace
 from opentelemetry.propagate import extract
-from opentelemetry.trace import SpanKind
 from app_settings import settings
 from otel import get_logger, initialize_otel, close as otel_close
 
@@ -93,7 +92,7 @@ def main() -> None:
                 logger.error("Consumer error: {}".format(error))
             continue
         else:
-            # Extract trace context from Kafka message headers
+            # Extract trace context from Kafka message headers for distributed tracing
             carrier: dict[str, str] = {}
             headers = msg.headers()
             if headers is not None:
@@ -101,13 +100,13 @@ def main() -> None:
                     if isinstance(value, bytes):
                         carrier[key] = value.decode('utf-8')
             
-            # Extract the parent context from headers
+            # Extract parent context and create a span as a child of the API trace
             parent_context = extract(carrier)
             
-            # Process message within a trace span
-            span_attributes: dict[str, str | int | bool] = {
+            # Add Kafka-specific attributes to the span using OpenTelemetry semantic conventions
+            span_attributes: dict[str, str | int] = {
                 "messaging.system": "kafka",
-                "messaging.destination": msg.topic() or "unknown",
+                "messaging.destination.name": msg.topic() or "unknown",  # Updated to semantic convention
                 "messaging.operation": "process",
             }
             
@@ -120,39 +119,22 @@ def main() -> None:
             if offset is not None:
                 span_attributes["messaging.kafka.offset"] = offset
             
-            # Start span as a child of the extracted context
             with tracer.start_as_current_span(
-                "process_kafka_message",
+                "cocktails-message-processing",
                 context=parent_context,
-                kind=SpanKind.CONSUMER,
                 attributes=span_attributes,
-            ) as span:
-                # Log trace ID for debugging
-                span_context = span.get_span_context()
-                trace_id = format(span_context.trace_id, '032x')
-                logger.debug(f"Processing message with trace_id: {trace_id}")
-                
+            ):
                 try:
                     value = msg.value()
-
                     if value is not None:
                         decoded_value = value.decode("utf-8")
                         logger.info(f"Received message: {decoded_value}")
-                        span.set_attribute("messaging.message.size", len(value))
                         # Add your message processing logic here
                     else:
                         logger.warning("Received message with no value")
-                        span.set_attribute("messaging.message.empty", True)
-                    
-                    # Mark span as successful
-                    span.set_status(trace.Status(trace.StatusCode.OK))
-                    
                 except Exception as e:
                     logger.error(f"Error processing message: {e}", exc_info=True)
-                    span.set_status(
-                        trace.Status(trace.StatusCode.ERROR, str(e))
-                    )
-                    span.record_exception(e)
+
 def cleanup() -> None:
     """Cleanup function to close the Kafka consumer."""
     global consumer
