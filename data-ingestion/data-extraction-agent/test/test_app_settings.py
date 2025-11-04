@@ -71,12 +71,16 @@ class TestAppSettings:
         self,
         mock_env_vars: Dict[str, str],
         clear_settings_cache: Any,
-        mocker: MockerFixture
+        mocker: MockerFixture,
     ) -> None:
         """Test that missing KAFKA_BOOTSTRAP_SERVERS raises ValueError."""
         mocker.patch.dict(
             "os.environ",
-            { key: value for key, value in mock_env_vars.items() if key != "KAFKA_BOOTSTRAP_SERVERS" },
+            {
+                key: value
+                for key, value in mock_env_vars.items()
+                if key != "KAFKA_BOOTSTRAP_SERVERS"
+            },
             clear=True,
         )
 
@@ -87,12 +91,16 @@ class TestAppSettings:
         self,
         mock_env_vars: Dict[str, str],
         clear_settings_cache: Any,
-        mocker: MockerFixture
+        mocker: MockerFixture,
     ) -> None:
         """Test that missing KAFKA_CONSUMER_GROUP raises ValueError."""
         mocker.patch.dict(
             "os.environ",
-            { key: value for key, value in mock_env_vars.items() if key != "KAFKA_CONSUMER_GROUP" },
+            {
+                key: value
+                for key, value in mock_env_vars.items()
+                if key != "KAFKA_CONSUMER_GROUP"
+            },
             clear=True,
         )
 
@@ -100,15 +108,19 @@ class TestAppSettings:
             import app_settings  # type: ignore[unused-ignore]
 
     def test_settings_raises_error_when_topic_name_missing(
-        self, 
+        self,
         mock_env_vars: Dict[str, str],
         clear_settings_cache: Any,
-        mocker: MockerFixture
+        mocker: MockerFixture,
     ) -> None:
         """Test that missing KAFKA_TOPIC_NAME raises ValueError."""
         mocker.patch.dict(
             "os.environ",
-            { key: value for key, value in mock_env_vars.items() if key != "KAFKA_TOPIC_NAME" },
+            {
+                key: value
+                for key, value in mock_env_vars.items()
+                if key != "KAFKA_TOPIC_NAME"
+            },
             clear=True,
         )
 
