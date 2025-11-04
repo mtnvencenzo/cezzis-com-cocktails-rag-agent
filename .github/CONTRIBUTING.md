@@ -117,7 +117,7 @@ This repository contains multiple interconnected services:
 4. **Commit your changes**
    ```bash
    git add .
-   git commit -m "feat(mcp): add new tool or behavior for ..."
+   git commit -m "feat(extraction): add new functionality for ..."
    ```
    
    Use [conventional commit format](https://www.conventionalcommits.org/):

@@ -64,12 +64,13 @@ def initialize_tracing(resource: Resource) -> None:
     # Wire up auto instrumentation for Kafka
     ConfluentKafkaInstrumentor().instrument()  # type: ignore[no-untyped-call]
 
-    otlp_exporter = OTLPSpanExporter(
-        endpoint=f"{settings.otel_exporter_otlp_endpoint}/v1/traces",
-        headers={"authorization": settings.otel_otlp_exporter_auth_header},
-    )
-    span_processor = BatchSpanProcessor(otlp_exporter)
-    trace_provider.add_span_processor(span_processor)
+    if settings.otel_exporter_otlp_endpoint:
+        otlp_exporter = OTLPSpanExporter(
+            endpoint=f"{settings.otel_exporter_otlp_endpoint}/v1/traces",
+            headers={"authorization": settings.otel_otlp_exporter_auth_header},
+        )
+        span_processor = BatchSpanProcessor(otlp_exporter)
+        trace_provider.add_span_processor(span_processor)
 
 
 def initialize_logging(resource: Resource) -> None:
@@ -84,24 +85,16 @@ def initialize_logging(resource: Resource) -> None:
     set_logger_provider(log_provider)
 
     # Add OTLP exporter for remote telemetry
-    otlp_log_exporter = OTLPLogExporter(
-        endpoint=f"{settings.otel_exporter_otlp_endpoint}/v1/logs",
-        headers={"authorization": settings.otel_otlp_exporter_auth_header},
-    )
-    otlp_log_processor = BatchLogRecordProcessor(otlp_log_exporter)
-    log_provider.add_log_record_processor(otlp_log_processor)
+    if settings.otel_exporter_otlp_endpoint:
+        otlp_log_exporter = OTLPLogExporter(
+            endpoint=f"{settings.otel_exporter_otlp_endpoint}/v1/logs",
+            headers={"authorization": settings.otel_otlp_exporter_auth_header},
+        )
+        otlp_log_processor = BatchLogRecordProcessor(otlp_log_exporter)
+        log_provider.add_log_record_processor(otlp_log_processor)
 
     # Add OpenTelemetry handler for OTLP export
     otel_handler = LoggingHandler(level=logging.NOTSET, logger_provider=log_provider)
-
-    # Add simple console handler for readable local output
-    console_handler = logging.StreamHandler()
-    console_handler.setLevel(logging.INFO)
-    console_formatter = logging.Formatter(
-        "%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-        datefmt="%Y-%m-%d %H:%M:%S",
-    )
-    console_handler.setFormatter(console_formatter)
 
     # Set the root logger level to NOTSET to ensure all messages are captured
     logging.getLogger().setLevel(logging.NOTSET)
@@ -109,7 +102,16 @@ def initialize_logging(resource: Resource) -> None:
     # Attach both handlers to root logger
     logging.getLogger().addHandler(otel_handler)
 
+    # Add simple console handler for readable local output
     if os.environ.get("ENV") == "local":
+        console_handler = logging.StreamHandler()
+        console_handler.setLevel(logging.INFO)
+        console_formatter = logging.Formatter(
+            "%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+            datefmt="%Y-%m-%d %H:%M:%S",
+        )
+        console_handler.setFormatter(console_formatter)
+
         logging.getLogger().addHandler(console_handler)
 
 
@@ -163,7 +165,13 @@ def create_kafka_child_span(
     if headers is not None:
         for key, value in headers:
             if isinstance(value, bytes):
-                carrier[key] = value.decode("utf-8")
+                try:
+                    carrier[key] = value.decode("utf-8")
+                except UnicodeDecodeError:
+                    logger = logging.getLogger(__name__)
+                    logger.warning(
+                        f"Failed to decode header '{key}' as UTF-8, skipping"
+                    )
 
     # Extract parent context and create a span as a child of the API trace
     parent_context = extract(carrier)

@@ -7,7 +7,7 @@ from confluent_kafka import Consumer, KafkaError
 from opentelemetry import trace
 
 # Application specific imports
-from otel import create_kafka_child_span
+from otel import create_kafka_child_span, initialize_otel, trace_provider
 
 tracer = trace.get_tracer(__name__)
 logger = logging.getLogger(__name__)
@@ -30,6 +30,16 @@ def start_consumer(
         topic_name (str): The topic name to subscribe to.
     """
     global logger
+    global tracer
+
+    # ----------------------------------------------------------------------------
+    # Initialize OpenTelemetry tracer if not already initialized.
+    # This is important for child processes spawned via multiprocessing. Depending
+    # on the platform, the child process may not inherit the parent's state
+    # ----------------------------------------------------------------------------
+    if trace_provider is None:
+        initialize_otel()
+        tracer = trace.get_tracer(__name__)
 
     consumer = _create_consumer(consumer_id, bootstrap_servers, consumer_group)
     if consumer is None:
@@ -73,7 +83,7 @@ def spawn_consumers(
     consumer_group: str,
     topic_name: str,
 ) -> None:
-    """Spawn multiple Kafka consumers based on settings.
+    """Spawn multiple Kafka consumers under a single consumer group.
 
     Args:
         num_consumers (int): The number of consumers to spawn.

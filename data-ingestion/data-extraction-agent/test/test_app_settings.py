@@ -14,7 +14,7 @@ def mock_env_vars() -> Dict[str, str]:
         "KAFKA_CONSUMER_GROUP": "test-consumer-group",
         "KAFKA_TOPIC_NAME": "test-topic",
         "KAFKA_NUM_CONSUMERS": "1",
-        "OTEL_EXPORTER_OTLP_ENDPOINT": "http://localhost:4317",
+        "OTEL_EXPORTER_OTLP_ENDPOINT": "http://localhost:4316",
         "OTEL_SERVICE_NAME": "test-service",
         "OTEL_SERVICE_NAMESPACE": "test-namespace",
         "OTEL_OTLP_AUTH_HEADER": "Bearer test-token",
@@ -62,7 +62,7 @@ class TestAppSettings:
         assert settings.consumer_group == "test-consumer-group"
         assert settings.topic_name == "test-topic"
         assert settings.num_consumers == 1
-        assert settings.otel_exporter_otlp_endpoint == "http://localhost:4317"
+        assert settings.otel_exporter_otlp_endpoint == "http://localhost:4316"
         assert settings.otel_service_name == "test-service"
         assert settings.otel_service_namespace == "test-namespace"
         assert settings.otel_otlp_exporter_auth_header == "Bearer test-token"
@@ -137,7 +137,7 @@ class TestAppSettings:
             "KAFKA_CONSUMER_GROUP=file-consumer-group\n"
             "KAFKA_TOPIC_NAME=file-topic\n"
             "KAFKA_NUM_CONSUMERS=2\n"
-            "OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4317\n"
+            "OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4316\n"
             "OTEL_SERVICE_NAME=file-service\n"
             "OTEL_SERVICE_NAMESPACE=file-namespace\n"
             "OTEL_OTLP_AUTH_HEADER=Bearer file-token\n"
@@ -161,7 +161,7 @@ class TestAppSettings:
             assert settings.consumer_group == "file-consumer-group"
             assert settings.topic_name == "file-topic"
             assert settings.num_consumers == 2
-            assert settings.otel_exporter_otlp_endpoint == "http://localhost:4317"
+            assert settings.otel_exporter_otlp_endpoint == "http://localhost:4316"
             assert settings.otel_service_name == "file-service"
             assert settings.otel_service_namespace == "file-namespace"
             assert settings.otel_otlp_exporter_auth_header == "Bearer file-token"
