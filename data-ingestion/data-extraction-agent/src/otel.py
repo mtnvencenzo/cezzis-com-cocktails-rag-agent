@@ -11,8 +11,8 @@ from opentelemetry import trace
 from opentelemetry._logs import set_logger_provider
 from opentelemetry.exporter.otlp.proto.http._log_exporter import OTLPLogExporter
 from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
-from opentelemetry.instrumentation.confluent_kafka import (
-    ConfluentKafkaInstrumentor,  # type: ignore
+from opentelemetry.instrumentation.confluent_kafka import (  # type: ignore
+    ConfluentKafkaInstrumentor,
 )
 from opentelemetry.propagate import extract
 from opentelemetry.sdk._logs import LoggerProvider, LoggingHandler

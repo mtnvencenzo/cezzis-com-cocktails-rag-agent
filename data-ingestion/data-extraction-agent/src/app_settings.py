@@ -5,6 +5,19 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class AppSettings(BaseSettings):
+    """Application settings loaded from environment variables and .env files.
+
+    Attributes:
+        bootstrap_servers (str): Kafka bootstrap servers.
+        consumer_group (str): Kafka consumer group ID.
+        topic_name (str): Kafka topic name.
+        num_consumers (int): Number of Kafka consumer processes to start.
+        otel_exporter_otlp_endpoint (str): OpenTelemetry OTLP exporter endpoint.
+        otel_service_name (str): OpenTelemetry service name.
+        otel_service_namespace (str): OpenTelemetry service namespace.
+        otel_otlp_exporter_auth_header (str): OpenTelemetry OTLP exporter authorization header
+    """
+
     model_config = SettingsConfigDict(
         env_file=(".env", f".env.{os.environ.get('ENV')}"), env_file_encoding="utf-8"
     )
