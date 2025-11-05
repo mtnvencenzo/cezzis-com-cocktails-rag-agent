@@ -16,7 +16,7 @@ class KafkaCocktailMsgProcessor(IKafkaMessageProcessor):
         _logger (logging.Logger): Logger instance for logging messages.
         _kafka_settings (KafkaConsumerSettings): Kafka consumer settings.
         _tracer (trace.Tracer): OpenTelemetry tracer for creating spans.
-    
+
     Methods:
         consumer_creating(consumer_id: int) -> None
         consumer_created(consumer: Consumer | None, consumer_id: int) -> None
