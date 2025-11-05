@@ -253,7 +253,7 @@ def _start_polling(stop_event: EventType, consumer: Consumer, processor: IKafkaM
     Args:
         stop_event (EventType): An event to signal when to stop the consumer.
         consumer (Consumer): The Kafka consumer.
-        processor (IKafkaProcessor): The message processor for handling messages.
+        processor (IKafkaMessageProcessor): The message processor for handling messages.
     """
     global logger
 

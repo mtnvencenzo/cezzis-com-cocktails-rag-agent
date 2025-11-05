@@ -18,13 +18,29 @@ class KafkaCocktailMsgProcessor(IKafkaMessageProcessor):
         _tracer (trace.Tracer): OpenTelemetry tracer for creating spans.
 
     Methods:
-        consumer_creating(consumer_id: int) -> None
-        consumer_created(consumer: Consumer | None, consumer_id: int) -> None
-        consumer_subscribed() -> None
-        consumer_stopping() -> None
-        message_received(message: Message, consumer_id: int) -> None
-        message_error_received(msg: Message) -> None
-        message_partition_reached(msg: Message) -> None
+        kafka_settings() -> KafkaConsumerSettings:
+            Get the Kafka consumer settings.
+
+        consumer_creating() -> None:
+            Hook called when the consumer is being created.
+
+        consumer_created(consumer: Consumer | None) -> None:
+            Hook called after the consumer has been created.
+
+        consumer_subscribed() -> None:
+            Hook called after the consumer has subscribed to topics.
+
+        consumer_stopping() -> None:
+            Hook called when the consumer is stopping.
+
+        message_received(msg: Message) -> None:
+            Process a received Kafka message.
+
+        message_error_received(msg: Message) -> None:
+            Hook called when an error message is received.
+
+        message_partition_reached(msg: Message) -> None:
+            Hook called when a partition end is reached.
     """
 
     def __init__(self, kafka_settings: KafkaConsumerSettings) -> None:
@@ -83,6 +99,20 @@ class KafkaCocktailMsgProcessor(IKafkaMessageProcessor):
                     )
 
                     for item in json_array:
+                        item_id = item.get("Id", "unknown")
+                        if item_id == "unknown":
+                            self._logger.warning(
+                                "Cocktail item missing 'Id' field, skipping",
+                                extra={
+                                    "messaging.kafka.consumer_id": self._kafka_settings.consumer_id,
+                                    "messaging.kafka.bootstrap_servers": self._kafka_settings.bootstrap_servers,
+                                    "messaging.kafka.consumer_group": self._kafka_settings.consumer_group,
+                                    "messaging.kafka.topic_name": self._kafka_settings.topic_name,
+                                    "messaging.kafka.partition": msg.partition(),
+                                },
+                            )
+                            continue
+
                         self._logger.info(
                             "Processing consumer cocktail message item",
                             extra={
@@ -91,7 +121,7 @@ class KafkaCocktailMsgProcessor(IKafkaMessageProcessor):
                                 "messaging.kafka.consumer_group": self._kafka_settings.consumer_group,
                                 "messaging.kafka.topic_name": self._kafka_settings.topic_name,
                                 "messaging.kafka.partition": msg.partition(),
-                                "cocktail.id": item["Id"],
+                                "cocktail.id": item_id,
                             },
                         )
                         # Add your message processing logic here
