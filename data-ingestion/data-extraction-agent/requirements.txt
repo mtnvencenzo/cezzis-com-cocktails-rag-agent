@@ -21,7 +21,7 @@ pydantic-settings==2.11.0
 
 # Kafka Client
 confluent-kafka==2.11.0
-types-confluent_kafka==1.3.6
+types-confluent_kafka==1.4.0
 
 # OpenTelemetry
 opentelemetry-api==1.38.0
