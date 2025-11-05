@@ -1,111 +1,47 @@
 import atexit
+import logging
 import signal
-import sys
+from multiprocessing import Event
+from multiprocessing.synchronize import Event as EventType
 from types import FrameType
 from typing import Optional
 
-# from app_settings import settings
-from confluent_kafka import Consumer, KafkaError
-
+# Application specific imports
+from app_logger import initialize_logger, shutdown_logger
 from app_settings import settings
+from kafka_consumer import spawn_consumers
 
-consumer: Consumer | None = None
-shutdown_requested = False
-
-
-def signal_handler(signum: int, _frame: Optional[FrameType]) -> None:
-    """Handle shutdown signals gracefully.
-
-    Args:
-        signum (int): The signal number.
-        _frame (Optional[FrameType]): The current stack frame (unused).
-    """
-    global shutdown_requested
-    print(f"\nShutdown signal received ({signum}), exiting gracefully...")
-    shutdown_requested = True
+logger: logging.Logger = logging.getLogger(__name__)
 
 
 def main() -> None:
-    """Main function to run the Kafka consumer."""
-    global shutdown_requested
+    """Main function to run the Kafka consumer. Sets up OpenTelemetry and starts consumers."""
+    global logger
 
-    # In main(), before the loop:
-    signal.signal(signal.SIGINT, signal_handler)
-    signal.signal(signal.SIGTERM, signal_handler)
+    initialize_logger(True)
+    logger = logging.getLogger(__name__)
+    logger.info("OpenTelemetry initialized successfully")
 
-    print("Starting Kafka consumer")
+    stop_event = Event()
+    # Registering the signal handler for SIGINT (Ctrl+C) and SIGTERM
+    # so we can gracefully shutdown the kafka consumers
+    signal.signal(signal.SIGINT, lambda signum, frame: signal_handler(signum, frame, stop_event))
+    signal.signal(signal.SIGTERM, lambda signum, frame: signal_handler(signum, frame, stop_event))
 
-    # Initialize the kafka consumer to read messages from 'cocktails-topic'
-    # Registering atexit handler to ensure proper cleanup on exit
-    print("Creating Kafka consumer")
-
-    try:
-        global consumer
-
-        consumer = Consumer(
-            {
-                "bootstrap.servers": settings.bootstrap_servers,
-                "group.id": settings.consumer_group,
-                "auto.offset.reset": "earliest",
-            }
-        )
-
-    except Exception as e:
-        print(f"Error creating Kafka consumer: {e}")
-        sys.exit(1)
-
-    try:
-        print(f"Subscribing to '{settings.topic_name}'")
-
-        consumer.subscribe([settings.topic_name])
-
-    except Exception as e:
-        print(f"Error subscribing to topic: {e}")
-        sys.exit(1)
-
-    print("Polling for messages...")
-
-    # Loop until the app is being shutdown
-    while not shutdown_requested:
-        msg = consumer.poll(1.0)
-
-        if msg is None:
-            continue
-        elif msg.error():
-            error = msg.error()
-            if error is not None and error.code() == KafkaError._PARTITION_EOF:
-                print(
-                    "End of partition reached {0}/{1}".format(
-                        msg.topic(), msg.partition()
-                    )
-                )
-            else:
-                print("Consumer error: {}".format(error))
-            continue
-
-        else:
-            value = msg.value()
-
-            if value is not None:
-                print("Received message: {}".format(value.decode("utf-8")))
-            else:
-                print("Received message with no value")
+    spawn_consumers(
+        settings.num_consumers,
+        stop_event,
+        settings.bootstrap_servers,
+        settings.consumer_group,
+        settings.topic_name,
+    )
 
 
-def cleanup() -> None:
-    """Cleanup function to close the Kafka consumer."""
-    print("Performing cleanup before exit.")
-    global consumer
-
-    if consumer is not None:
-        try:
-            consumer.commit()
-        except Exception as e:
-            print(f"Error committing offsets: {e}")
-
-        consumer.close()
+def signal_handler(signum: int, _frame: Optional[FrameType], event: EventType) -> None:
+    logger.info(f"Parent process received signal {signum}. Setting stop event.")
+    event.set()  # Set the event to signal worker processes to stop
 
 
 if __name__ == "__main__":
-    atexit.register(cleanup)
+    atexit.register(shutdown_logger)
     main()

@@ -29,7 +29,7 @@ exclude = [
 ]
 
 # Same as Black.
-line-length = 88
+line-length = 120
 indent-width = 4
 
 # Assume Python 3.9
@@ -51,8 +51,8 @@ dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
 
 [lint.per-file-ignores]
 # Ignore unused imports (F401) in test files - some imports trigger side effects
-"test_*.py" = ["F401"]
-"**/test_*.py" = ["F401"]
+"test_*.py" = ["F401", "F811"]
+"**/test_*.py" = ["F401", "F811"]
 
 [format]
 # Like Black, use double quotes for strings.
