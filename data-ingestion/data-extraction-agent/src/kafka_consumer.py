@@ -17,8 +17,7 @@ def start_consumer(stop_event: EventType, processor: IKafkaMessageProcessor) -> 
 
     Args:
         stop_event (EventType): An event to signal when to stop the consumer.
-        kafka_settings (KafkaConsumerSettings): The Kafka consumer settings.
-        processor (IKafkaProcessor): An instance of IKafkaProcessor to handle message processing.
+        processor (IKafkaMessageProcessor): An instance of IKafkaMessageProcessor to handle message processing.
     """
     global logger
 
