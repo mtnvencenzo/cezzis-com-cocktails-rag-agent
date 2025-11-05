@@ -18,26 +18,16 @@ class AppSettings(BaseSettings):
         otel_otlp_exporter_auth_header (str): OpenTelemetry OTLP exporter authorization header
     """
 
-    model_config = SettingsConfigDict(
-        env_file=(".env", f".env.{os.environ.get('ENV')}"), env_file_encoding="utf-8"
-    )
+    model_config = SettingsConfigDict(env_file=(".env", f".env.{os.environ.get('ENV')}"), env_file_encoding="utf-8")
 
-    bootstrap_servers: str = Field(
-        default="", validation_alias="KAFKA_BOOTSTRAP_SERVERS"
-    )
+    bootstrap_servers: str = Field(default="", validation_alias="KAFKA_BOOTSTRAP_SERVERS")
     consumer_group: str = Field(default="", validation_alias="KAFKA_CONSUMER_GROUP")
     topic_name: str = Field(default="", validation_alias="KAFKA_TOPIC_NAME")
     num_consumers: int = Field(default=1, validation_alias="KAFKA_NUM_CONSUMERS")
-    otel_exporter_otlp_endpoint: str = Field(
-        default="", validation_alias="OTEL_EXPORTER_OTLP_ENDPOINT"
-    )
+    otel_exporter_otlp_endpoint: str = Field(default="", validation_alias="OTEL_EXPORTER_OTLP_ENDPOINT")
     otel_service_name: str = Field(default="", validation_alias="OTEL_SERVICE_NAME")
-    otel_service_namespace: str = Field(
-        default="", validation_alias="OTEL_SERVICE_NAMESPACE"
-    )
-    otel_otlp_exporter_auth_header: str = Field(
-        default="", validation_alias="OTEL_OTLP_AUTH_HEADER"
-    )
+    otel_service_namespace: str = Field(default="", validation_alias="OTEL_SERVICE_NAMESPACE")
+    otel_otlp_exporter_auth_header: str = Field(default="", validation_alias="OTEL_OTLP_AUTH_HEADER")
 
 
 settings = AppSettings()
@@ -58,8 +48,6 @@ if not settings.otel_service_namespace:
 if not settings.otel_otlp_exporter_auth_header:
     raise ValueError("OTEL_OTLP_AUTH_HEADER environment variable is required")
 if not settings.num_consumers or settings.num_consumers < 1:
-    raise ValueError(
-        "KAFKA_NUM_CONSUMERS environment variable must be a positive integer"
-    )
+    raise ValueError("KAFKA_NUM_CONSUMERS environment variable must be a positive integer")
 
 print("App settings loaded successfully.")

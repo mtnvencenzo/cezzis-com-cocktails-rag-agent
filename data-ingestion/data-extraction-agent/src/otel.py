@@ -146,9 +146,7 @@ def get_logger(name: str) -> logging.Logger:
     return logging.getLogger(name)
 
 
-def create_kafka_child_span(
-    tracer: trace.Tracer, span_name: str, msg: Message
-) -> ContextManager[Span]:
+def create_kafka_child_span(tracer: trace.Tracer, span_name: str, msg: Message) -> ContextManager[Span]:
     """Create a child span for Kafka message processing.
 
     Args:
@@ -169,9 +167,7 @@ def create_kafka_child_span(
                     carrier[key] = value.decode("utf-8")
                 except UnicodeDecodeError:
                     logger = logging.getLogger(__name__)
-                    logger.warning(
-                        f"Failed to decode header '{key}' as UTF-8, skipping"
-                    )
+                    logger.warning(f"Failed to decode header '{key}' as UTF-8, skipping")
 
     # Extract parent context and create a span as a child of the API trace
     parent_context = extract(carrier)
@@ -179,8 +175,7 @@ def create_kafka_child_span(
     # Add Kafka-specific attributes to the span using OpenTelemetry semantic conventions
     span_attributes: dict[str, str | int] = {
         "messaging.system": "kafka",
-        "messaging.destination.name": msg.topic()
-        or "unknown",  # Updated to semantic convention
+        "messaging.destination.name": msg.topic() or "unknown",  # Updated to semantic convention
         "messaging.operation": "process",
     }
 

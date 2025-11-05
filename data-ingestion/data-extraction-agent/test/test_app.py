@@ -1,4 +1,4 @@
-# """Unit tests for app module."""
+"""Unit tests for app module."""
 
 # import signal
 # from typing import Any, Generator

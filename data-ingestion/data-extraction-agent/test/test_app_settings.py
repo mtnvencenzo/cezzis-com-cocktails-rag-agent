@@ -4,52 +4,17 @@ from typing import Any, Dict, Generator
 
 import pytest
 from pytest_mock import MockerFixture
-
-
-@pytest.fixture
-def mock_env_vars() -> Dict[str, str]:
-    """Fixture to provide mock environment variables."""
-    return {
-        "KAFKA_BOOTSTRAP_SERVERS": "localhost:9092",
-        "KAFKA_CONSUMER_GROUP": "test-consumer-group",
-        "KAFKA_TOPIC_NAME": "test-topic",
-        "KAFKA_NUM_CONSUMERS": "1",
-        "OTEL_EXPORTER_OTLP_ENDPOINT": "http://localhost:4316",
-        "OTEL_SERVICE_NAME": "test-service",
-        "OTEL_SERVICE_NAMESPACE": "test-namespace",
-        "OTEL_OTLP_AUTH_HEADER": "Bearer test-token",
-    }
-
-
-@pytest.fixture
-def clear_settings_cache() -> Generator[None, None, None]:
-    """Clear the settings module cache before each test."""
-    import sys
-
-    # Remove the module from sys.modules to force a fresh import
-    modules_to_remove = [
-        key for key in sys.modules.keys() if key.startswith("app_settings")
-    ]
-    for module in modules_to_remove:
-        del sys.modules[module]
-
-    yield
-
-    # Clean up after test
-    modules_to_remove = [
-        key for key in sys.modules.keys() if key.startswith("app_settings")
-    ]
-    for module in modules_to_remove:
-        del sys.modules[module]
+from test_fixtures import clear_settings_cache, mock_env_vars  # type: ignore[import]
 
 
 class TestAppSettings:
     """Test suite for AppSettings configuration."""
 
+    @pytest.mark.usefixtures("clear_settings_cache")
     def test_settings_loads_from_environment_variables(
         self,
         mock_env_vars: Dict[str, str],
-        clear_settings_cache: Any,
+        clear_settings_cache: Generator[None, None, None],
         mocker: MockerFixture,
     ) -> None:
         """Test that settings are correctly loaded from environment variables."""
@@ -67,46 +32,41 @@ class TestAppSettings:
         assert settings.otel_service_namespace == "test-namespace"
         assert settings.otel_otlp_exporter_auth_header == "Bearer test-token"
 
+    @pytest.mark.usefixtures("clear_settings_cache")
     def test_settings_raises_error_when_bootstrap_servers_missing(
         self,
         mock_env_vars: Dict[str, str],
-        clear_settings_cache: Any,
+        clear_settings_cache: Generator[None, None, None],
         mocker: MockerFixture,
     ) -> None:
         """Test that missing KAFKA_BOOTSTRAP_SERVERS raises ValueError."""
         mocker.patch.dict(
             "os.environ",
-            {
-                key: value
-                for key, value in mock_env_vars.items()
-                if key != "KAFKA_BOOTSTRAP_SERVERS"
-            },
+            {key: value for key, value in mock_env_vars.items() if key != "KAFKA_BOOTSTRAP_SERVERS"},
             clear=True,
         )
 
         with pytest.raises(ValueError, match="KAFKA_BOOTSTRAP_SERVERS.*required"):
             import app_settings  # type: ignore[unused-ignore]
 
+    @pytest.mark.usefixtures("clear_settings_cache")
     def test_settings_raises_error_when_consumer_group_missing(
         self,
         mock_env_vars: Dict[str, str],
-        clear_settings_cache: Any,
+        clear_settings_cache: Generator[None, None, None],
         mocker: MockerFixture,
     ) -> None:
         """Test that missing KAFKA_CONSUMER_GROUP raises ValueError."""
         mocker.patch.dict(
             "os.environ",
-            {
-                key: value
-                for key, value in mock_env_vars.items()
-                if key != "KAFKA_CONSUMER_GROUP"
-            },
+            {key: value for key, value in mock_env_vars.items() if key != "KAFKA_CONSUMER_GROUP"},
             clear=True,
         )
 
         with pytest.raises(ValueError, match="KAFKA_CONSUMER_GROUP.*required"):
             import app_settings  # type: ignore[unused-ignore]
 
+    @pytest.mark.usefixtures("clear_settings_cache")
     def test_settings_raises_error_when_topic_name_missing(
         self,
         mock_env_vars: Dict[str, str],
@@ -116,19 +76,16 @@ class TestAppSettings:
         """Test that missing KAFKA_TOPIC_NAME raises ValueError."""
         mocker.patch.dict(
             "os.environ",
-            {
-                key: value
-                for key, value in mock_env_vars.items()
-                if key != "KAFKA_TOPIC_NAME"
-            },
+            {key: value for key, value in mock_env_vars.items() if key != "KAFKA_TOPIC_NAME"},
             clear=True,
         )
 
         with pytest.raises(ValueError, match="KAFKA_TOPIC_NAME.*required"):
             import app_settings  # type: ignore[unused-ignore]
 
+    @pytest.mark.usefixtures("clear_settings_cache")
     def test_settings_with_env_file(
-        self, clear_settings_cache: Any, mocker: MockerFixture, tmp_path: Any
+        self, clear_settings_cache: Generator[None, None, None], mocker: MockerFixture, tmp_path: Any
     ) -> None:
         """Test that settings can be loaded from .env file."""
         env_file = tmp_path / ".env"
@@ -168,10 +125,11 @@ class TestAppSettings:
         finally:
             os.chdir(original_dir)
 
+    @pytest.mark.usefixtures("clear_settings_cache")
     def test_settings_model_config(
         self,
         mock_env_vars: Dict[str, str],
-        clear_settings_cache: Any,
+        clear_settings_cache: Generator[None, None, None],
         mocker: MockerFixture,
     ) -> None:
         """Test that AppSettings has correct model configuration."""
