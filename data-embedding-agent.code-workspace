@@ -1,0 +1,19 @@
+{
+	"folders": [
+		{
+			"name": ".github",
+			"path": ".github"
+		},
+		{
+			"name": "data-embedding-agent",
+			"path": "data-ingestion/data-embedding-agent"
+		}
+	],
+	"settings": {
+		"dotnet.defaultSolution": "disable",
+		"yaml.schemas": {
+			"https://raw.githubusercontent.com/GitTools/GitVersion/main/schemas/6.3/GitVersion.json": "GitVersion.yml"
+		},
+		"python-envs.defaultEnvManager": "ms-python.python:venv"
+	}
+}
