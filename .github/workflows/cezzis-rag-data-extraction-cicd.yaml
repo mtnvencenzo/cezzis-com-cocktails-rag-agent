@@ -44,20 +44,17 @@ jobs:
   build:
     name: Build and test
     needs: [gitVersion]
-    uses: mtnvencenzo/workflows/.github/workflows/python-build.yaml@main
+    uses: mtnvencenzo/workflows/.github/workflows/py-simple-build.yaml@main
     with:
       python_version: '3.12'
-      working_directory: './data-ingestion/data-extraction-agent'
-      requirements_file: 'requirements.txt'
-      requirements_dev_file: 'requirements-dev.txt'
+      working_directory: './kafka-packages'
       ruff_config: '.ruff.toml'
       pytest_args: '-v'
+      coverage_source: 'cezzis_kafka'
       upload_artifact: true
       artifact_name: 'cocktails-rag-data-extraction-agent'
       setup_files: '["./Dockerfile-CI"]'
       version: ${{ needs.gitVersion.outputs.semVer }}
-    secrets:
-      github_packages_pat_token: ${{ secrets.GH_PACKAGES_PAT_TOKEN_READ }}
 
   docker:
     name: Containerize app
@@ -71,7 +68,6 @@ jobs:
       image_tag: '${{ github.sha }}'
       acr_registry_login_server: 'acrveceusgloshared001.azurecr.io'
       acr_image_repository: 'cocktailsragdataextractionagent'
-
     secrets:
       acr_registry_login_username: ${{ secrets.ACR_REGISTRY_USERNAME }}
       acr_registry_login_password: ${{ secrets.ACR_REGISTRY_PASSWORD }}
