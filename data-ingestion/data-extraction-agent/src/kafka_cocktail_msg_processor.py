@@ -1,12 +1,12 @@
 import json
 import logging
+from typing import ContextManager
 
+from cezzis_kafka import IKafkaMessageProcessor, KafkaConsumerSettings
 from confluent_kafka import Consumer, Message
 from opentelemetry import trace
-
-from ikafka_message_processor import IKafkaMessageProcessor
-from kafka_consumer_settings import KafkaConsumerSettings
-from otel import create_kafka_child_span
+from opentelemetry.propagate import extract
+from opentelemetry.trace import Span
 
 
 class KafkaCocktailMsgProcessor(IKafkaMessageProcessor):
@@ -56,6 +56,18 @@ class KafkaCocktailMsgProcessor(IKafkaMessageProcessor):
         self._kafka_settings = kafka_settings
         self._tracer = trace.get_tracer(__name__)
 
+    @staticmethod
+    def CreateNew(kafka_settings: KafkaConsumerSettings) -> IKafkaMessageProcessor:
+        """Factory method to create a new instance of KafkaCocktailMsgProcessor.
+
+        Args:
+            kafka_settings (KafkaConsumerSettings): The Kafka consumer settings.
+
+        Returns:
+            IKafkaMessageProcessor: A new instance of KafkaCocktailMsgProcessor.
+        """
+        return KafkaCocktailMsgProcessor(kafka_settings)
+
     def kafka_settings(self) -> KafkaConsumerSettings:
         """Get the Kafka consumer settings.
 
@@ -80,7 +92,7 @@ class KafkaCocktailMsgProcessor(IKafkaMessageProcessor):
 
     def message_received(self, msg: Message) -> None:
         # Create a span for processing this Kafka message, linked to the API trace
-        with create_kafka_child_span(self._tracer, "cocktails-message-processing", msg):
+        with self._create_kafka_child_span(self._tracer, "cocktails-message-processing", msg):
             try:
                 value = msg.value()
                 if value is not None:
@@ -154,3 +166,51 @@ class KafkaCocktailMsgProcessor(IKafkaMessageProcessor):
 
     def message_partition_reached(self, msg: Message) -> None:
         pass
+
+    def _create_kafka_child_span(self, tracer: trace.Tracer, span_name: str, msg: Message) -> ContextManager[Span]:
+        """Create a child span for Kafka message processing.
+
+        Args:
+            tracer (trace.Tracer): The OpenTelemetry tracer.
+            span_name (str): The name of the span.
+            msg (Message): The Kafka message object.
+
+        Returns:
+            ContextManager[Span]: A context manager that yields the created child span.
+        """
+        # Extract trace context from Kafka message headers for distributed tracing
+        carrier: dict[str, str] = {}
+        headers = msg.headers()
+        if headers is not None:
+            for key, value in headers:
+                if isinstance(value, bytes):
+                    try:
+                        carrier[key] = value.decode("utf-8")
+                    except UnicodeDecodeError:
+                        logger = logging.getLogger(__name__)
+                        logger.warning(f"Failed to decode header '{key}' as UTF-8, skipping")
+
+        # Extract parent context and create a span as a child of the API trace
+        parent_context = extract(carrier)
+
+        # Add Kafka-specific attributes to the span using OpenTelemetry semantic conventions
+        span_attributes: dict[str, str | int] = {
+            "messaging.system": "kafka",
+            "messaging.destination.name": msg.topic() or "unknown",  # Updated to semantic convention
+            "messaging.operation": "process",
+        }
+
+        # Add optional attributes if available
+        partition = msg.partition()
+        if partition is not None:
+            span_attributes["messaging.kafka.partition"] = partition
+
+        offset = msg.offset()
+        if offset is not None:
+            span_attributes["messaging.kafka.offset"] = offset
+
+        return tracer.start_as_current_span(
+            span_name,
+            context=parent_context,
+            attributes=span_attributes,
+        )
