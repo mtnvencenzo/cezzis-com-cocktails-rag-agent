@@ -47,10 +47,10 @@ jobs:
     uses: mtnvencenzo/workflows/.github/workflows/py-simple-build.yaml@main
     with:
       python_version: '3.12'
-      working_directory: './kafka-packages'
+      working_directory: './data-ingestion/data-extraction-agent'
       ruff_config: '.ruff.toml'
       pytest_args: '-v'
-      coverage_source: 'cezzis_kafka'
+      coverage_source: 'data-extraction-agent'
       upload_artifact: true
       artifact_name: 'cocktails-rag-data-extraction-agent'
       setup_files: '["./Dockerfile-CI"]'
