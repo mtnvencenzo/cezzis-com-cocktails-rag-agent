@@ -1,5 +1,6 @@
 import atexit
 import logging
+import os
 import signal
 import socket
 from multiprocessing import Event
@@ -31,7 +32,7 @@ def main() -> None:
             otlp_exporter_endpoint=settings.otel_exporter_otlp_endpoint,
             otlp_exporter_auth_header=settings.otel_otlp_exporter_auth_header,
             service_version=__version__,
-            environment="production",
+            environment=os.environ.get("ENV", "unknown"),
             instance_id=socket.gethostname(),
             enable_logging=True,
             enable_tracing=True,

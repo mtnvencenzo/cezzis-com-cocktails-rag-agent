@@ -1,24 +1,22 @@
-.PHONY: install run test py-source
+.PHONY: install build test shell ruff-check ruff-format coverage standards
 
 install:
-	pip install -r requirements.txt -r requirements-dev.txt
+	poetry install --no-root
 
-py-source:
-	. .venv/bin/activate && \
-	export PATH=".venv/bin::PATH" && \
-	exec "$$SHELL"
-
-run:
-	cd src && ENV="local" python3 app.py
+shell:
+	poetry shell
 
 ruff-check:
-	ruff check --fix . --config .ruff.toml
+	poetry run ruff check --fix . --config .ruff.toml
 
 ruff-format:
-	ruff format . --config .ruff.toml
+	poetry run ruff format . --config .ruff.toml
 
 test:
-	pytest test/
+	poetry run pytest test/
+
+coverage:
+	poetry run pytest -v --cov=data-ext-agent --cov-report=xml:coverage.xml --cov-report=term --junitxml=pytest-results.xml
 
 standards:
 	@make ruff-check
