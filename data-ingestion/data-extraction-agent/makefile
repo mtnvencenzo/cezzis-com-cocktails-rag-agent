@@ -16,7 +16,7 @@ test:
 	poetry run pytest test/
 
 coverage:
-	poetry run pytest -v --cov=data-ext-agent --cov-report=xml:coverage.xml --cov-report=term --junitxml=pytest-results.xml
+	poetry run pytest -v --cov=src --cov-report=xml:coverage.xml --cov-report=term --junitxml=pytest-results.xml
 
 standards:
 	@make ruff-check
