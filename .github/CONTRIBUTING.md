@@ -29,11 +29,7 @@ Before you begin, ensure you have the following installed:
 cezzis-com-cocktails-rag-agent/
 ├── data-ingestion/
 │   └── data-extraction-agent/    # Kafka consumer for cocktail data extraction
-│       ├── src/                  # Python application code
-│       ├── test/                 # Unit and integration tests
-│       ├── Dockerfile            # Production container
-│       ├── Dockerfile-CI         # CI/CD container
-│       └── requirements.txt      # Python dependencies
+│   └── data-embedding-agent/    # Kafka consumer for cocktail data embedding
 ├── terraform/                    # Infrastructure as Code (Azure)
 └── .github/                      # GitHub workflows and templates
 ```
@@ -42,6 +38,7 @@ cezzis-com-cocktails-rag-agent/
 
 This repository contains multiple interconnected services:
 - **Data Extraction Agent**: Kafka consumer that processes cocktail data updates
+- **Data Embedding Agent**: Kafka consumer that runs text embedding on cocktail data
 - _(More services to be added as the RAG solution evolves)_
 
 ## 💻 Development Setup
@@ -50,39 +47,6 @@ This repository contains multiple interconnected services:
    ```bash
    git clone https://github.com/mtnvencenzo/cezzis-com-cocktails-rag-agent.git
    cd cezzis-com-cocktails-rag-agent
-   ```
-
-2. **Set Up Data Extraction Agent**
-   ```bash
-   cd data-ingestion/data-extraction-agent
-   
-   # Create virtual environment
-   python3 -m venv .venv
-   source .venv/bin/activate
-   
-   # Install dependencies
-   pip install -r requirements.txt
-   pip install -r requirements-dev.txt
-   ```
-
-3. **Run Tests**
-   ```bash
-   # Run unit tests
-   make test
-   
-   # Run with coverage
-   pytest --cov=. --cov-report=term
-   ```
-
-4. **Run Locally**
-   ```bash
-   # Set environment variables
-   export KAFKA_BOOTSTRAP_SERVERS=localhost:9092
-   export KAFKA_CONSUMER_GROUP=extraction-group
-   export KAFKA_TOPIC_NAME=cocktails-topic
-   
-   # Run the application
-   python src/app.py
    ```
 
 5. **Docker Compose (Optional)**
