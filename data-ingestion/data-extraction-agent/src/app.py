@@ -8,7 +8,7 @@ from multiprocessing.synchronize import Event as EventType
 from types import FrameType
 from typing import Optional
 
-from cezzis_kafka import spawn_consumers
+from cezzis_kafka import start_consumer
 from cezzis_otel import OTelSettings, __version__, initialize_otel, shutdown_otel
 from opentelemetry.instrumentation.confluent_kafka import (  # type: ignore
     ConfluentKafkaInstrumentor,
@@ -16,7 +16,7 @@ from opentelemetry.instrumentation.confluent_kafka import (  # type: ignore
 
 # Application specific imports
 from app_settings import settings
-from kafka_cocktail_msg_processor import KafkaCocktailMsgProcessor
+from cocktail_extraction_msg_processor import CocktailExtractionMsgProcessor, KafkaConsumerSettings
 
 logger: logging.Logger = logging.getLogger(__name__)
 
@@ -49,13 +49,16 @@ def main() -> None:
     signal.signal(signal.SIGINT, lambda signum, frame: signal_handler(signum, frame, stop_event))
     signal.signal(signal.SIGTERM, lambda signum, frame: signal_handler(signum, frame, stop_event))
 
-    spawn_consumers(
-        KafkaCocktailMsgProcessor,
-        settings.num_consumers,
+    start_consumer(
         stop_event,
-        settings.bootstrap_servers,
-        settings.consumer_group,
-        settings.topic_name,
+        CocktailExtractionMsgProcessor(
+            kafka_consumer_settings=KafkaConsumerSettings(
+                consumer_id=1,
+                bootstrap_servers=settings.bootstrap_servers,
+                topic_name=settings.extraction_topic_name,
+                consumer_group=settings.consumer_group,
+            )
+        ),
     )
 
 

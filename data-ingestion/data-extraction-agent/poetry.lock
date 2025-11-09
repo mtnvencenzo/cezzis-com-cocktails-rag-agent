@@ -107,14 +107,14 @@ files = [
 
 [[package]]
 name = "cezzis-kafka"
-version = "0.0.5"
+version = "0.0.6"
 description = "cezzis-kafka is a lightweight Python library for working with Kafka topics and event streams. It simplifies producing, consuming, and managing messages, enabling seamless integration with distributed systems and real-time data pipelines. Designed for flexibility and ease of use, cezzis-kafka supports both synchronous and asynchronous workflows."
 optional = false
 python-versions = "<3.15,>=3.12"
 groups = ["main"]
 files = [
-    {file = "cezzis_kafka-0.0.5-py3-none-any.whl", hash = "sha256:9e84bf344a923effd7bef97236f659df72749bb4ea226944b35af65092abf2a9"},
-    {file = "cezzis_kafka-0.0.5.tar.gz", hash = "sha256:8de825209fb262c1f3eb5e0af9d47304af7fd75b60462716003d84837c1ffcd9"},
+    {file = "cezzis_kafka-0.0.6-py3-none-any.whl", hash = "sha256:95ee8ea233ffd2a32ed59336ec92ed687352d76f64d0764055610e752f9677ed"},
+    {file = "cezzis_kafka-0.0.6.tar.gz", hash = "sha256:b49a05d2f4de93850634ca2414e539eeac2dc4283d20a7fa8b82a380a551db56"},
 ]
 
 [package.dependencies]
@@ -1061,6 +1061,26 @@ packaging = ">=18.0"
 wrapt = ">=1.0.0,<2.0.0"
 
 [[package]]
+name = "opentelemetry-instrumentation-confluent-kafka"
+version = "0.59b0"
+description = "OpenTelemetry Confluent Kafka instrumentation"
+optional = false
+python-versions = ">=3.9"
+groups = ["main"]
+files = [
+    {file = "opentelemetry_instrumentation_confluent_kafka-0.59b0-py3-none-any.whl", hash = "sha256:df041ce9e9f102ea8d016553896cd331648cd5a754eeed5568b38f13f503a6b4"},
+    {file = "opentelemetry_instrumentation_confluent_kafka-0.59b0.tar.gz", hash = "sha256:f6d8706aadd9051fbf75eac323f8f80b1e245a59a84d7aa368691ee68e4ba3f8"},
+]
+
+[package.dependencies]
+opentelemetry-api = ">=1.12,<2.0"
+opentelemetry-instrumentation = "0.59b0"
+wrapt = ">=1.0.0,<2.0.0"
+
+[package.extras]
+instruments = ["confluent-kafka (>=1.8.2,<=2.11.0)"]
+
+[[package]]
 name = "opentelemetry-instrumentation-logging"
 version = "0.59b0"
 description = "OpenTelemetry Logging instrumentation"
@@ -1850,4 +1870,4 @@ type = ["pytest-mypy"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.12,<3.15"
-content-hash = "ed5a92135ca92037c86407c5a5d1d5d8e42518177541ab9366414d3a8f72b48f"
+content-hash = "10979302b7880351860a3a55e2d271313643ec1c82b48fa0b14b98f2cf21d697"

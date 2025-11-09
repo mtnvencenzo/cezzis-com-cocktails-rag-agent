@@ -13,7 +13,8 @@ def mock_env_vars() -> Dict[str, str]:
     return {
         "KAFKA_BOOTSTRAP_SERVERS": "localhost:9092",
         "KAFKA_CONSUMER_GROUP": "test-consumer-group",
-        "KAFKA_TOPIC_NAME": "test-topic",
+        "KAFKA_EXTRACTION_TOPIC_NAME": "test-topic-ext",
+        "KAFKA_EMBEDDING_TOPIC_NAME": "test-topic-emb",
         "KAFKA_NUM_CONSUMERS": "1",
         "OTEL_EXPORTER_OTLP_ENDPOINT": "http://localhost:4316",
         "OTEL_SERVICE_NAME": "test-service",
