@@ -58,6 +58,11 @@ dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
 # Like Black, use double quotes for strings.
 quote-style = "double"
 
+[tool.ruff]
+exclude = [
+    "cocktail_models.py",
+]
+
 # Like Black, indent with spaces, rather than tabs.
 indent-style = "space"
 

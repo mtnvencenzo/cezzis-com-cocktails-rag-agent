@@ -2,11 +2,13 @@ import json
 import logging
 from typing import ContextManager
 
-from cezzis_kafka import IKafkaMessageProcessor, KafkaConsumerSettings
+from cezzis_kafka import IKafkaMessageProcessor, KafkaConsumerSettings, KafkaProducer, KafkaProducerSettings
 from confluent_kafka import Consumer, Message
 from opentelemetry import trace
 from opentelemetry.propagate import extract
 from opentelemetry.trace import Span
+
+from kafka_delivery_handler import on_delivered_to_embedding_topic
 
 
 class KafkaCocktailMsgProcessor(IKafkaMessageProcessor):
@@ -55,6 +57,12 @@ class KafkaCocktailMsgProcessor(IKafkaMessageProcessor):
         self._logger: logging.Logger = logging.getLogger(__name__)
         self._kafka_settings = kafka_settings
         self._tracer = trace.get_tracer(__name__)
+
+        self.producer = KafkaProducer(
+            settings=KafkaProducerSettings(
+                bootstrap_servers=kafka_settings.bootstrap_servers, on_delivery=on_delivered_to_embedding_topic
+            )
+        )
 
     @staticmethod
     def CreateNew(kafka_settings: KafkaConsumerSettings) -> IKafkaMessageProcessor:
@@ -111,8 +119,8 @@ class KafkaCocktailMsgProcessor(IKafkaMessageProcessor):
                     )
 
                     for item in json_array:
-                        item_id = item.get("Id", "unknown")
-                        if item_id == "unknown":
+                        cocktail_id = item.get("Id", "unknown")
+                        if cocktail_id == "unknown":
                             self._logger.warning(
                                 "Cocktail item missing 'Id' field, skipping",
                                 extra={
@@ -133,10 +141,12 @@ class KafkaCocktailMsgProcessor(IKafkaMessageProcessor):
                                 "messaging.kafka.consumer_group": self._kafka_settings.consumer_group,
                                 "messaging.kafka.topic_name": self._kafka_settings.topic_name,
                                 "messaging.kafka.partition": msg.partition(),
-                                "cocktail.id": item_id,
+                                "cocktail.id": cocktail_id,
                             },
                         )
-                        # Add your message processing logic here
+
+                        # Process the individual cocktail message
+                        self._process_message(cocktail_id, msg)
                 else:
                     self._logger.warning(
                         "Received consumer cocktail message with no value",
@@ -214,3 +224,6 @@ class KafkaCocktailMsgProcessor(IKafkaMessageProcessor):
             context=parent_context,
             attributes=span_attributes,
         )
+
+    def _process_message(self, cocktail_id: str, msg: Message) -> None:
+        pass
