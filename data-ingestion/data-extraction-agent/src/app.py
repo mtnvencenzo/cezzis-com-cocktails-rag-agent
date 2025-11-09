@@ -3,7 +3,8 @@ import logging
 import os
 import signal
 import socket
-from multiprocessing import Event, Process
+import threading
+from multiprocessing import Event
 from multiprocessing.synchronize import Event as EventType
 from types import FrameType
 from typing import Optional
@@ -50,37 +51,69 @@ def main() -> None:
     signal.signal(signal.SIGINT, lambda signum, frame: signal_handler(signum, frame, stop_event))
     signal.signal(signal.SIGTERM, lambda signum, frame: signal_handler(signum, frame, stop_event))
 
-    # Start the extraction consumer
-    start_consumer(
-        stop_event,
-        CocktailsExtractionProcessor(
-            kafka_consumer_settings=KafkaConsumerSettings(
-                consumer_id=1,
-                bootstrap_servers=settings.bootstrap_servers,
-                topic_name=settings.extraction_topic_name,
-                consumer_group=settings.consumer_group,
-            )
+    # Create and start the extraction consumer thread
+    extraction_thread = threading.Thread(
+        target=start_consumer,
+        args=(
+            stop_event,
+            CocktailsExtractionProcessor(
+                kafka_consumer_settings=KafkaConsumerSettings(
+                    consumer_id=1,
+                    bootstrap_servers=settings.bootstrap_servers,
+                    topic_name=settings.extraction_topic_name,
+                    consumer_group=settings.consumer_group,
+                )
+            ),
         ),
+        name="ExtractionConsumer",
+        daemon=False,
     )
+    extraction_thread.start()
+    logger.info("Started extraction consumer thread")
 
-    # Start the embedding consumer
-    start_consumer(
-        stop_event,
-        CocktailsEmbeddingProcessor(
-            kafka_consumer_settings=KafkaConsumerSettings(
-                consumer_id=1,
-                bootstrap_servers=settings.bootstrap_servers,
-                topic_name=settings.embedding_topic_name,
-                consumer_group=settings.consumer_group,
-            )
+    # Create and start the embedding consumer thread
+    embedding_thread = threading.Thread(
+        target=start_consumer,
+        args=(
+            stop_event,
+            CocktailsEmbeddingProcessor(
+                kafka_consumer_settings=KafkaConsumerSettings(
+                    consumer_id=2,  # Different consumer ID
+                    bootstrap_servers=settings.bootstrap_servers,
+                    topic_name=settings.embedding_topic_name,
+                    consumer_group=settings.consumer_group,
+                )
+            ),
         ),
+        name="EmbeddingConsumer",
+        daemon=False,
     )
+    embedding_thread.start()
+    logger.info("Started embedding consumer thread")
+
+    try:
+        # Wait for both threads to complete
+        while extraction_thread.is_alive() or embedding_thread.is_alive():
+            extraction_thread.join(timeout=1)
+            embedding_thread.join(timeout=1)
+    except KeyboardInterrupt:
+        logger.info("Received keyboard interrupt, shutting down consumers")
+        stop_event.set()
+        
+        # Wait for threads to finish gracefully
+        extraction_thread.join(timeout=10)
+        embedding_thread.join(timeout=10)
+        
+        if extraction_thread.is_alive():
+            logger.warning("Extraction consumer thread did not shut down gracefully")
+        if embedding_thread.is_alive():
+            logger.warning("Embedding consumer thread did not shut down gracefully")
 
 
 
 def signal_handler(signum: int, _frame: Optional[FrameType], event: EventType) -> None:
-    logger.info(f"Parent process received signal {signum}. Setting stop event.")
-    event.set()  # Set the event to signal worker processes to stop
+    logger.info(f"Received signal {signum}. Setting stop event.")
+    event.set()  # Set the event to signal consumer threads to stop
 
 
 if __name__ == "__main__":
