@@ -12,8 +12,8 @@ from app_settings import settings
 from cocktail_models import CocktailModel
 
 
-class CocktailExtractionMsgProcessor(IKafkaMessageProcessor):
-    """Concrete implementation of IKafkaMessageProcessor for processing cocktail extraction messages from Kafka.
+class CocktailsEmbeddingProcessor(IKafkaMessageProcessor):
+    """Concrete implementation of IKafkaMessageProcessor for processing cocktail embedding messages from Kafka.
 
     Attributes:
         _logger (logging.Logger): Logger instance for logging messages.
@@ -47,7 +47,7 @@ class CocktailExtractionMsgProcessor(IKafkaMessageProcessor):
     """
 
     def __init__(self, kafka_consumer_settings: KafkaConsumerSettings) -> None:
-        """Initialize the CocktailExtractionMsgProcessor
+        """Initialize the CocktailsEmbeddingProcessor
         Args:
             kafka_consumer_settings (KafkaConsumerSettings): The Kafka consumer settings.
             kafka_producer_settings (KafkaProducerSettings): The Kafka producer settings.
@@ -58,31 +58,25 @@ class CocktailExtractionMsgProcessor(IKafkaMessageProcessor):
 
         self._logger: logging.Logger = logging.getLogger(__name__)
         self._kafka_consumer_settings = kafka_consumer_settings
-
-        self.producer = KafkaProducer(
-            settings=KafkaProducerSettings(
-                bootstrap_servers=settings.bootstrap_servers, on_delivery=self._on_delivered_to_embedding_topic
-            )
-        )
-
         self._tracer = trace.get_tracer(__name__)
 
     @staticmethod
     def CreateNew(kafka_settings: KafkaConsumerSettings) -> IKafkaMessageProcessor:
-        """Factory method to create a new instance of CocktailExtractionMsgProcessor.
+        """Factory method to create a new instance of CocktailsEmbeddingProcessor.
 
         Args:
             kafka_settings (KafkaConsumerSettings): The Kafka consumer settings.
 
         Returns:
-            IKafkaMessageProcessor: A new instance of CocktailExtractionMsgProcessor.
+            IKafkaMessageProcessor: A new instance of CocktailsEmbeddingProcessor.
         """
-        return CocktailExtractionMsgProcessor(kafka_consumer_settings=kafka_settings)
+        return CocktailsEmbeddingProcessor(kafka_consumer_settings=kafka_settings)
 
     def kafka_settings(self) -> KafkaConsumerSettings:
         """Get the Kafka consumer settings.
 
-        Args:    None
+        Args:
+            None
 
         Returns:
             KafkaConsumerSettings: The Kafka consumer settings.
@@ -103,47 +97,44 @@ class CocktailExtractionMsgProcessor(IKafkaMessageProcessor):
 
     def message_received(self, msg: Message) -> None:
         # Create a span for processing this Kafka message, linked to the API trace
-        with self._create_kafka_consumer_read_span(self._tracer, "cocktail-extraction-message-processing", msg):
+        with self._create_kafka_consumer_read_span(self._tracer, "cocktail-embedding-message-processing", msg):
             try:
                 value = msg.value()
                 if value is not None:
                     decoded_value = value.decode("utf-8")
-                    json_array = json.loads(decoded_value)
+                    json_data = json.loads(decoded_value)
                     self._logger.info(
-                        "Received cocktail extraction message",
+                        "Received cocktail embedding message",
                         extra={
                             "messaging.kafka.consumer_id": self._kafka_consumer_settings.consumer_id,
                             "messaging.kafka.bootstrap_servers": self._kafka_consumer_settings.bootstrap_servers,
                             "messaging.kafka.consumer_group": self._kafka_consumer_settings.consumer_group,
                             "messaging.kafka.topic_name": self._kafka_consumer_settings.topic_name,
-                            "messaging.kafka.partition": msg.partition(),
-                            "cocktail_item_count": len(json_array),
+                            "messaging.kafka.partition": msg.partition()
                         },
                     )
 
-                    for item in json_array:
-                        cocktail_model = CocktailModel(**item)
-                        cocktail_id = cocktail_model.id
-                        if cocktail_id == "unknown":
-                            self._logger.warning(
-                                "Cocktail item missing 'Id' field, skipping",
-                                extra={
-                                    "messaging.kafka.consumer_id": self._kafka_consumer_settings.consumer_id,
-                                    "messaging.kafka.bootstrap_servers": self._kafka_consumer_settings.bootstrap_servers,
-                                    "messaging.kafka.consumer_group": self._kafka_consumer_settings.consumer_group,
-                                    "messaging.kafka.topic_name": self._kafka_consumer_settings.topic_name,
-                                    "messaging.kafka.partition": msg.partition(),
-                                },
-                            )
-                            continue
+                    cocktail_model = CocktailModel(**json_data)
+                    cocktail_id = cocktail_model.id
+                    if cocktail_id == "unknown":
+                        self._logger.warning(
+                            "Cocktail item missing 'Id' field, skipping",
+                            extra={
+                                "messaging.kafka.consumer_id": self._kafka_consumer_settings.consumer_id,
+                                "messaging.kafka.bootstrap_servers": self._kafka_consumer_settings.bootstrap_servers,
+                                "messaging.kafka.consumer_group": self._kafka_consumer_settings.consumer_group,
+                                "messaging.kafka.topic_name": self._kafka_consumer_settings.topic_name,
+                                "messaging.kafka.partition": msg.partition(),
+                            },
+                        )
 
-                        # ----------------------------------------
-                        # Process the individual cocktail message
-                        # ----------------------------------------
-                        self._process_message(model=cocktail_model)
+                    # ----------------------------------------
+                    # Process the individual cocktail message
+                    # ----------------------------------------
+                    self._process_message(model=cocktail_model)
                 else:
                     self._logger.warning(
-                        "Received cocktail extraction message with no value",
+                        "Received cocktail embedding message with no value",
                         extra={
                             "messaging.kafka.consumer_id": self._kafka_consumer_settings.consumer_id,
                             "messaging.kafka.bootstrap_servers": self._kafka_consumer_settings.bootstrap_servers,
@@ -154,7 +145,7 @@ class CocktailExtractionMsgProcessor(IKafkaMessageProcessor):
                     )
             except Exception as e:
                 self._logger.error(
-                    "Error processing cocktail extraction message",
+                    "Error processing cocktail embedding message",
                     extra={
                         "messaging.kafka.consumer_id": self._kafka_consumer_settings.consumer_id,
                         "messaging.kafka.bootstrap_servers": self._kafka_consumer_settings.bootstrap_servers,
@@ -223,14 +214,14 @@ class CocktailExtractionMsgProcessor(IKafkaMessageProcessor):
 
     def _process_message(self, model: CocktailModel) -> None:
         self._logger.info(
-            "Processing cocktail extraction message item",
+            "Processing cocktail embedding message item",
             extra={
                 "cocktail.id": model.id,
             },
         )
 
         self._logger.info(
-            "Sending cocktail extraction result message to embedding topic",
+            "Sending cocktail embedding result to vector database",
             extra={
                 "messaging.kafka.bootstrap_servers": self._kafka_consumer_settings.bootstrap_servers,
                 "messaging.kafka.topic_name": settings.embedding_topic_name,
@@ -238,25 +229,3 @@ class CocktailExtractionMsgProcessor(IKafkaMessageProcessor):
             },
         )
 
-        self.producer.send_and_wait(
-            topic=settings.embedding_topic_name,
-            key=model.id,
-            message=json.dumps({"Id": model.id}).encode("utf-8"),
-            timeout=30.0,
-        )
-
-    def _on_delivered_to_embedding_topic(self, err: KafkaError | None, msg: Message) -> None:
-        """Callback function to handle message delivery reports for the embedding topic.
-
-        Args:
-            err (KafkaError | None): The error if the message delivery failed, else None.
-            msg (Message): The Kafka message that was delivered.
-
-        Returns:
-            None
-
-        """
-        if err:
-            self._logger.error(f"Message delivery failed: {err}")
-        else:
-            self._logger.info(f"Message delivered to {msg.topic()} [{msg.partition()}] at offset {msg.offset()}")

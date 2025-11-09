@@ -3,12 +3,12 @@ import logging
 import os
 import signal
 import socket
-from multiprocessing import Event
+from multiprocessing import Event, Process
 from multiprocessing.synchronize import Event as EventType
 from types import FrameType
 from typing import Optional
 
-from cezzis_kafka import start_consumer
+from cezzis_kafka import start_consumer, KafkaConsumerSettings
 from cezzis_otel import OTelSettings, __version__, initialize_otel, shutdown_otel
 from opentelemetry.instrumentation.confluent_kafka import (  # type: ignore
     ConfluentKafkaInstrumentor,
@@ -16,7 +16,8 @@ from opentelemetry.instrumentation.confluent_kafka import (  # type: ignore
 
 # Application specific imports
 from app_settings import settings
-from cocktail_extraction_msg_processor import CocktailExtractionMsgProcessor, KafkaConsumerSettings
+from cocktails_extraction_processor import CocktailsExtractionProcessor
+from cocktails_embedding_processor import CocktailsEmbeddingProcessor
 
 logger: logging.Logger = logging.getLogger(__name__)
 
@@ -49,9 +50,10 @@ def main() -> None:
     signal.signal(signal.SIGINT, lambda signum, frame: signal_handler(signum, frame, stop_event))
     signal.signal(signal.SIGTERM, lambda signum, frame: signal_handler(signum, frame, stop_event))
 
+    # Start the extraction consumer
     start_consumer(
         stop_event,
-        CocktailExtractionMsgProcessor(
+        CocktailsExtractionProcessor(
             kafka_consumer_settings=KafkaConsumerSettings(
                 consumer_id=1,
                 bootstrap_servers=settings.bootstrap_servers,
@@ -60,6 +62,20 @@ def main() -> None:
             )
         ),
     )
+
+    # Start the embedding consumer
+    start_consumer(
+        stop_event,
+        CocktailsEmbeddingProcessor(
+            kafka_consumer_settings=KafkaConsumerSettings(
+                consumer_id=1,
+                bootstrap_servers=settings.bootstrap_servers,
+                topic_name=settings.embedding_topic_name,
+                consumer_group=settings.consumer_group,
+            )
+        ),
+    )
+
 
 
 def signal_handler(signum: int, _frame: Optional[FrameType], event: EventType) -> None:
