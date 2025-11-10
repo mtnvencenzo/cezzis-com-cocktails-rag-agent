@@ -12,10 +12,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy requirements file
-COPY .pyproject.toml .
+COPY pyproject.toml .
 COPY ./poetry.lock .
 
-RUN pip install poetry
+RUN pip install --no-cache-dir poetry
+
+RUN poetry config virtualenvs.create false  
 
 # Install Python dependencies
 RUN poetry install --no-root

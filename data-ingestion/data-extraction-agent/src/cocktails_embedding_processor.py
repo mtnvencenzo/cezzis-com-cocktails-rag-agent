@@ -50,7 +50,6 @@ class CocktailsEmbeddingProcessor(IAsyncKafkaMessageProcessor):
         """Initialize the CocktailsEmbeddingProcessor
         Args:
             kafka_consumer_settings (KafkaConsumerSettings): The Kafka consumer settings.
-            kafka_producer_settings (KafkaProducerSettings): The Kafka producer settings.
 
         Returns:
             None
@@ -68,7 +67,7 @@ class CocktailsEmbeddingProcessor(IAsyncKafkaMessageProcessor):
             kafka_settings (KafkaConsumerSettings): The Kafka consumer settings.
 
         Returns:
-            IKafkaMessageProcessor: A new instance of CocktailsEmbeddingProcessor.
+            IAsyncKafkaMessageProcessor: A new instance of CocktailsEmbeddingProcessor.
         """
         return CocktailsEmbeddingProcessor(kafka_consumer_settings=kafka_settings)
 
@@ -127,6 +126,7 @@ class CocktailsEmbeddingProcessor(IAsyncKafkaMessageProcessor):
                                 "messaging.kafka.partition": msg.partition(),
                             },
                         )
+                        return
 
                     # ----------------------------------------
                     # Process the individual cocktail message

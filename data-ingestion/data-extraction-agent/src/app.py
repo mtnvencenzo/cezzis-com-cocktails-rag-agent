@@ -65,6 +65,7 @@ async def main() -> None:
         logger.info("Application cancelled")
     except Exception as e:
         logger.error("Application error", exc_info=True, extra={"error": str(e)})
+        raise
 
 
 def signal_handler(signum: int, _frame: Optional[FrameType], event: EventType) -> None:

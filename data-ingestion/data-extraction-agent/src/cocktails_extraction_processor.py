@@ -7,6 +7,7 @@ from confluent_kafka import Consumer, KafkaError, Message
 from opentelemetry import trace
 from opentelemetry.propagate import extract
 from opentelemetry.trace import Span
+from pydantic import ValidationError
 
 from app_settings import settings
 from cocktail_models import CocktailModel
@@ -75,7 +76,7 @@ class CocktailsExtractionProcessor(IAsyncKafkaMessageProcessor):
             kafka_settings (KafkaConsumerSettings): The Kafka consumer settings.
 
         Returns:
-            IKafkaMessageProcessor: A new instance of CocktailsExtractionProcessor.
+            IAsyncKafkaMessageProcessor: A new instance of CocktailsExtractionProcessor.
         """
         return CocktailsExtractionProcessor(kafka_consumer_settings=kafka_settings)
 
@@ -122,7 +123,23 @@ class CocktailsExtractionProcessor(IAsyncKafkaMessageProcessor):
                     )
 
                     for item in json_array:
-                        cocktail_model = CocktailModel(**item)
+                        try:
+                            cocktail_model = CocktailModel(**item)
+                        except ValidationError as ve:
+                            self._logger.error(
+                                "Failed to parse cocktail extraction message item",
+                                exc_info=True,
+                                extra={
+                                    "messaging.kafka.consumer_id": self._kafka_consumer_settings.consumer_id,
+                                    "messaging.kafka.bootstrap_servers": self._kafka_consumer_settings.bootstrap_servers,
+                                    "messaging.kafka.consumer_group": self._kafka_consumer_settings.consumer_group,
+                                    "messaging.kafka.topic_name": self._kafka_consumer_settings.topic_name,
+                                    "messaging.kafka.partition": msg.partition(),
+                                    "error": str(ve),
+                                },
+                            )
+                            continue
+
                         cocktail_id = cocktail_model.id
                         if cocktail_id == "unknown":
                             self._logger.warning(
@@ -140,7 +157,23 @@ class CocktailsExtractionProcessor(IAsyncKafkaMessageProcessor):
                         # ----------------------------------------
                         # Process the individual cocktail message
                         # ----------------------------------------
-                        self._process_message(model=cocktail_model)
+                        try:
+                            self._process_message(model=cocktail_model)
+                        except Exception as e:
+                            self._logger.error(
+                                "Error processing cocktail extraction message item",
+                                exc_info=True,
+                                extra={
+                                    "messaging.kafka.consumer_id": self._kafka_consumer_settings.consumer_id,
+                                    "messaging.kafka.bootstrap_servers": self._kafka_consumer_settings.bootstrap_servers,
+                                    "messaging.kafka.consumer_group": self._kafka_consumer_settings.consumer_group,
+                                    "messaging.kafka.topic_name": self._kafka_consumer_settings.topic_name,
+                                    "messaging.kafka.partition": msg.partition(),
+                                    "cocktail.id": cocktail_id,
+                                    "error": str(e),
+                                },
+                            )
+                            continue
                 else:
                     self._logger.warning(
                         "Received cocktail extraction message with no value",
