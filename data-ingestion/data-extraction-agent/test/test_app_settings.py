@@ -21,7 +21,7 @@ class TestAppSettings:
         mocker.patch.dict("os.environ", mock_env_vars)
         mocker.patch("builtins.print")  # Suppress print output
 
-        from app_settings import settings
+        from config.app_settings import settings
 
         assert settings.bootstrap_servers == "localhost:9092"
         assert settings.consumer_group == "test-consumer-group"
@@ -48,7 +48,7 @@ class TestAppSettings:
         )
 
         with pytest.raises(ValueError, match="KAFKA_BOOTSTRAP_SERVERS.*required"):
-            import app_settings  # type: ignore[unused-ignore]
+            import config.app_settings  # type: ignore[unused-ignore]
 
     @pytest.mark.usefixtures("clear_settings_cache")
     def test_settings_raises_error_when_consumer_group_missing(
@@ -65,7 +65,7 @@ class TestAppSettings:
         )
 
         with pytest.raises(ValueError, match="KAFKA_CONSUMER_GROUP.*required"):
-            import app_settings  # type: ignore[unused-ignore]
+            import config.app_settings  # type: ignore[unused-ignore]
 
     @pytest.mark.usefixtures("clear_settings_cache")
     def test_settings_raises_error_when_extraction_topic_name_missing(
@@ -82,7 +82,7 @@ class TestAppSettings:
         )
 
         with pytest.raises(ValueError, match="KAFKA_EXTRACTION_TOPIC_NAME.*required"):
-            import app_settings  # type: ignore[unused-ignore]
+            import config.app_settings  # type: ignore[unused-ignore]
 
     @pytest.mark.usefixtures("clear_settings_cache")
     def test_settings_with_env_file(
@@ -112,7 +112,7 @@ class TestAppSettings:
         os.chdir(tmp_path)
 
         try:
-            from app_settings import AppSettings
+            from config.app_settings import AppSettings
 
             settings = AppSettings()
 
@@ -139,7 +139,7 @@ class TestAppSettings:
         mocker.patch.dict("os.environ", mock_env_vars)
         mocker.patch("builtins.print")
 
-        from app_settings import AppSettings
+        from config.app_settings import AppSettings
 
         # Verify the model has the expected configuration
         assert AppSettings.model_config is not None

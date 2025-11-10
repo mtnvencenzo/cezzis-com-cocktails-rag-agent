@@ -3,9 +3,6 @@ import atexit
 import logging
 import os
 import socket
-from multiprocessing.synchronize import Event as EventType
-from types import FrameType
-from typing import Optional
 
 from cezzis_kafka import shutdown_consumers, spawn_consumers_async
 from cezzis_otel import OTelSettings, __version__, initialize_otel, shutdown_otel
@@ -14,9 +11,9 @@ from opentelemetry.instrumentation.confluent_kafka import (  # type: ignore
 )
 
 # Application specific imports
-from app_settings import settings
-from cocktails_embedding_processor import CocktailsEmbeddingProcessor
-from cocktails_extraction_processor import CocktailsExtractionProcessor
+from config.app_settings import settings
+from message_processors.cocktails_embedding_processor import CocktailsEmbeddingProcessor
+from message_processors.cocktails_extraction_processor import CocktailsExtractionProcessor
 
 logger: logging.Logger = logging.getLogger(__name__)
 
@@ -66,11 +63,6 @@ async def main() -> None:
     except Exception as e:
         logger.error("Application error", exc_info=True, extra={"error": str(e)})
         raise
-
-
-def signal_handler(signum: int, _frame: Optional[FrameType], event: EventType) -> None:
-    logger.info(f"Received signal {signum}. Setting stop event.")
-    event.set()  # Set the event to signal consumer threads to stop
 
 
 if __name__ == "__main__":
