@@ -1,14 +1,13 @@
+import asyncio
 import atexit
 import logging
 import os
-import signal
 import socket
-from multiprocessing import Event
 from multiprocessing.synchronize import Event as EventType
 from types import FrameType
 from typing import Optional
 
-from cezzis_kafka import spawn_consumers
+from cezzis_kafka import shutdown_consumers, spawn_consumers_async
 from cezzis_otel import OTelSettings, __version__, initialize_otel, shutdown_otel
 from opentelemetry.instrumentation.confluent_kafka import (  # type: ignore
     ConfluentKafkaInstrumentor,
@@ -16,12 +15,13 @@ from opentelemetry.instrumentation.confluent_kafka import (  # type: ignore
 
 # Application specific imports
 from app_settings import settings
-from kafka_cocktail_msg_processor import KafkaCocktailMsgProcessor
+from cocktails_embedding_processor import CocktailsEmbeddingProcessor
+from cocktails_extraction_processor import CocktailsExtractionProcessor
 
 logger: logging.Logger = logging.getLogger(__name__)
 
 
-def main() -> None:
+async def main() -> None:
     """Main function to run the Kafka consumer. Sets up OpenTelemetry and starts consumers."""
     global logger
 
@@ -43,27 +43,43 @@ def main() -> None:
     logger = logging.getLogger(__name__)
     logger.info("OpenTelemetry initialized successfully")
 
-    stop_event = Event()
-    # Registering the signal handler for SIGINT (Ctrl+C) and SIGTERM
-    # so we can gracefully shutdown the kafka consumers
-    signal.signal(signal.SIGINT, lambda signum, frame: signal_handler(signum, frame, stop_event))
-    signal.signal(signal.SIGTERM, lambda signum, frame: signal_handler(signum, frame, stop_event))
-
-    spawn_consumers(
-        KafkaCocktailMsgProcessor,
-        settings.num_consumers,
-        stop_event,
-        settings.bootstrap_servers,
-        settings.consumer_group,
-        settings.topic_name,
-    )
+    try:
+        # Start both consumer groups concurrently
+        await asyncio.gather(
+            spawn_consumers_async(
+                factory_type=CocktailsExtractionProcessor,
+                num_consumers=settings.num_consumers,
+                bootstrap_servers=settings.bootstrap_servers,
+                consumer_group=settings.consumer_group,
+                topic_name=settings.extraction_topic_name,
+            ),
+            spawn_consumers_async(
+                factory_type=CocktailsEmbeddingProcessor,
+                num_consumers=settings.num_consumers,
+                bootstrap_servers=settings.bootstrap_servers,
+                consumer_group=settings.consumer_group,
+                topic_name=settings.embedding_topic_name,
+            ),
+        )
+    except asyncio.CancelledError:
+        logger.info("Application cancelled")
+    except Exception as e:
+        logger.error("Application error", exc_info=True, extra={"error": str(e)})
+        raise
 
 
 def signal_handler(signum: int, _frame: Optional[FrameType], event: EventType) -> None:
-    logger.info(f"Parent process received signal {signum}. Setting stop event.")
-    event.set()  # Set the event to signal worker processes to stop
+    logger.info(f"Received signal {signum}. Setting stop event.")
+    event.set()  # Set the event to signal consumer threads to stop
 
 
 if __name__ == "__main__":
     atexit.register(shutdown_otel)
-    main()
+
+    try:
+        print("Starting Cocktail Data Ingestion Agent...")
+        asyncio.run(main())
+    except KeyboardInterrupt:
+        logger.info("Keyboard interrupt received. Shutting down...")
+    finally:
+        shutdown_consumers()

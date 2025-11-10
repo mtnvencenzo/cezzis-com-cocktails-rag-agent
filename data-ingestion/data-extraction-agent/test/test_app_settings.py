@@ -25,7 +25,8 @@ class TestAppSettings:
 
         assert settings.bootstrap_servers == "localhost:9092"
         assert settings.consumer_group == "test-consumer-group"
-        assert settings.topic_name == "test-topic"
+        assert settings.extraction_topic_name == "test-topic-ext"
+        assert settings.embedding_topic_name == "test-topic-emb"
         assert settings.num_consumers == 1
         assert settings.otel_exporter_otlp_endpoint == "http://localhost:4316"
         assert settings.otel_service_name == "test-service"
@@ -67,7 +68,7 @@ class TestAppSettings:
             import app_settings  # type: ignore[unused-ignore]
 
     @pytest.mark.usefixtures("clear_settings_cache")
-    def test_settings_raises_error_when_topic_name_missing(
+    def test_settings_raises_error_when_extraction_topic_name_missing(
         self,
         mock_env_vars: Dict[str, str],
         clear_settings_cache: Any,
@@ -76,11 +77,11 @@ class TestAppSettings:
         """Test that missing KAFKA_TOPIC_NAME raises ValueError."""
         mocker.patch.dict(
             "os.environ",
-            {key: value for key, value in mock_env_vars.items() if key != "KAFKA_TOPIC_NAME"},
+            {key: value for key, value in mock_env_vars.items() if key != "KAFKA_EXTRACTION_TOPIC_NAME"},
             clear=True,
         )
 
-        with pytest.raises(ValueError, match="KAFKA_TOPIC_NAME.*required"):
+        with pytest.raises(ValueError, match="KAFKA_EXTRACTION_TOPIC_NAME.*required"):
             import app_settings  # type: ignore[unused-ignore]
 
     @pytest.mark.usefixtures("clear_settings_cache")
@@ -92,7 +93,8 @@ class TestAppSettings:
         env_file.write_text(
             "KAFKA_BOOTSTRAP_SERVERS=localhost:9092\n"
             "KAFKA_CONSUMER_GROUP=file-consumer-group\n"
-            "KAFKA_TOPIC_NAME=file-topic\n"
+            "KAFKA_EXTRACTION_TOPIC_NAME=file-topic-ext\n"
+            "KAFKA_EMBEDDING_TOPIC_NAME=file-topic-emb\n"
             "KAFKA_NUM_CONSUMERS=2\n"
             "OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4316\n"
             "OTEL_SERVICE_NAME=file-service\n"
@@ -116,7 +118,8 @@ class TestAppSettings:
 
             assert settings.bootstrap_servers == "localhost:9092"
             assert settings.consumer_group == "file-consumer-group"
-            assert settings.topic_name == "file-topic"
+            assert settings.extraction_topic_name == "file-topic-ext"
+            assert settings.embedding_topic_name == "file-topic-emb"
             assert settings.num_consumers == 2
             assert settings.otel_exporter_otlp_endpoint == "http://localhost:4316"
             assert settings.otel_service_name == "file-service"

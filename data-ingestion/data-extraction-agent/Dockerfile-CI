@@ -12,10 +12,15 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Copy artifact contents (built by CI/CD pipeline)
 # The pipeline extracts the artifact which contains src/ directory
 COPY ./src ./src
-COPY ./requirements.txt .
+COPY pyproject.toml .
+COPY ./poetry.lock .
+
+RUN pip install --no-cache-dir poetry
+
+RUN poetry config virtualenvs.create false  
 
 # Install Python dependencies
-RUN pip install --no-cache-dir -r requirements.txt
+RUN poetry install --no-root
 
 # Set Python to run in unbuffered mode for better logging
 ENV PYTHONUNBUFFERED=1
