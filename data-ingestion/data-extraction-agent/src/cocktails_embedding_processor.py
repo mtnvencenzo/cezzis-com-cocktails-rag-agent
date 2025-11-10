@@ -2,8 +2,8 @@ import json
 import logging
 from typing import ContextManager
 
-from cezzis_kafka import IKafkaMessageProcessor, KafkaConsumerSettings, KafkaProducer, KafkaProducerSettings
-from confluent_kafka import Consumer, KafkaError, Message
+from cezzis_kafka import IAsyncKafkaMessageProcessor, KafkaConsumerSettings
+from confluent_kafka import Consumer, Message
 from opentelemetry import trace
 from opentelemetry.propagate import extract
 from opentelemetry.trace import Span
@@ -12,8 +12,8 @@ from app_settings import settings
 from cocktail_models import CocktailModel
 
 
-class CocktailsEmbeddingProcessor(IKafkaMessageProcessor):
-    """Concrete implementation of IKafkaMessageProcessor for processing cocktail embedding messages from Kafka.
+class CocktailsEmbeddingProcessor(IAsyncKafkaMessageProcessor):
+    """Concrete implementation of IAsyncKafkaMessageProcessor for processing cocktail embedding messages from Kafka.
 
     Attributes:
         _logger (logging.Logger): Logger instance for logging messages.
@@ -61,7 +61,7 @@ class CocktailsEmbeddingProcessor(IKafkaMessageProcessor):
         self._tracer = trace.get_tracer(__name__)
 
     @staticmethod
-    def CreateNew(kafka_settings: KafkaConsumerSettings) -> IKafkaMessageProcessor:
+    def CreateNew(kafka_settings: KafkaConsumerSettings) -> IAsyncKafkaMessageProcessor:
         """Factory method to create a new instance of CocktailsEmbeddingProcessor.
 
         Args:
@@ -83,19 +83,19 @@ class CocktailsEmbeddingProcessor(IKafkaMessageProcessor):
         """
         return self._kafka_consumer_settings
 
-    def consumer_creating(self) -> None:
+    async def consumer_creating(self) -> None:
         pass
 
-    def consumer_created(self, consumer: Consumer | None) -> None:
+    async def consumer_created(self, consumer: Consumer | None) -> None:
         pass
 
-    def consumer_subscribed(self) -> None:
+    async def consumer_subscribed(self) -> None:
         pass
 
-    def consumer_stopping(self) -> None:
+    async def consumer_stopping(self) -> None:
         pass
 
-    def message_received(self, msg: Message) -> None:
+    async def message_received(self, msg: Message) -> None:
         # Create a span for processing this Kafka message, linked to the API trace
         with self._create_kafka_consumer_read_span(self._tracer, "cocktail-embedding-message-processing", msg):
             try:
@@ -110,7 +110,7 @@ class CocktailsEmbeddingProcessor(IKafkaMessageProcessor):
                             "messaging.kafka.bootstrap_servers": self._kafka_consumer_settings.bootstrap_servers,
                             "messaging.kafka.consumer_group": self._kafka_consumer_settings.consumer_group,
                             "messaging.kafka.topic_name": self._kafka_consumer_settings.topic_name,
-                            "messaging.kafka.partition": msg.partition()
+                            "messaging.kafka.partition": msg.partition(),
                         },
                     )
 
@@ -156,10 +156,10 @@ class CocktailsEmbeddingProcessor(IKafkaMessageProcessor):
                     },
                 )
 
-    def message_error_received(self, msg: Message) -> None:
+    async def message_error_received(self, msg: Message) -> None:
         pass
 
-    def message_partition_reached(self, msg: Message) -> None:
+    async def message_partition_reached(self, msg: Message) -> None:
         pass
 
     def _create_kafka_consumer_read_span(
@@ -178,11 +178,13 @@ class CocktailsEmbeddingProcessor(IKafkaMessageProcessor):
         # Extract trace context from Kafka message headers for distributed tracing
         carrier: dict[str, str] = {}
         headers = msg.headers()
+
         if headers is not None:
             for key, value in headers:
                 if isinstance(value, bytes):
                     try:
-                        carrier[key] = value.decode("utf-8")
+                        decoded_value = value.decode("utf-8")
+                        carrier[key] = decoded_value
                     except UnicodeDecodeError:
                         logger = logging.getLogger(__name__)
                         logger.warning(f"Failed to decode header '{key}' as UTF-8, skipping")
@@ -206,11 +208,21 @@ class CocktailsEmbeddingProcessor(IKafkaMessageProcessor):
         if offset is not None:
             span_attributes["messaging.kafka.offset"] = offset
 
-        return tracer.start_as_current_span(
-            span_name,
-            context=parent_context,
-            attributes=span_attributes,
-        )
+        try:
+            span_context_manager = tracer.start_as_current_span(
+                span_name,
+                context=parent_context,
+                attributes=span_attributes,
+            )
+            return span_context_manager
+        except Exception as e:
+            self._logger.error(f"Failed to create span: {e}")
+            # Return a fallback span if creation fails
+            return tracer.start_as_current_span(
+                f"fallback-{span_name}",
+                context=None,
+                attributes={"error": "span_creation_failed"},
+            )
 
     def _process_message(self, model: CocktailModel) -> None:
         self._logger.info(
@@ -228,4 +240,3 @@ class CocktailsEmbeddingProcessor(IKafkaMessageProcessor):
                 "cocktail.id": model.id,
             },
         )
-

@@ -107,14 +107,14 @@ files = [
 
 [[package]]
 name = "cezzis-kafka"
-version = "0.0.6"
+version = "0.0.8"
 description = "cezzis-kafka is a lightweight Python library for working with Kafka topics and event streams. It simplifies producing, consuming, and managing messages, enabling seamless integration with distributed systems and real-time data pipelines. Designed for flexibility and ease of use, cezzis-kafka supports both synchronous and asynchronous workflows."
 optional = false
 python-versions = "<3.15,>=3.12"
 groups = ["main"]
 files = [
-    {file = "cezzis_kafka-0.0.6-py3-none-any.whl", hash = "sha256:95ee8ea233ffd2a32ed59336ec92ed687352d76f64d0764055610e752f9677ed"},
-    {file = "cezzis_kafka-0.0.6.tar.gz", hash = "sha256:b49a05d2f4de93850634ca2414e539eeac2dc4283d20a7fa8b82a380a551db56"},
+    {file = "cezzis_kafka-0.0.8-py3-none-any.whl", hash = "sha256:61346bbe67365a159528a5f32f8e4548fcefba171fc682096ae17d448db51e86"},
+    {file = "cezzis_kafka-0.0.8.tar.gz", hash = "sha256:9cd6656020ad0a5a1e3c7fdebeedcca80d1740ca0e61e72d1a45bc79bac6016b"},
 ]
 
 [package.dependencies]
@@ -1870,4 +1870,4 @@ type = ["pytest-mypy"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.12,<3.15"
-content-hash = "10979302b7880351860a3a55e2d271313643ec1c82b48fa0b14b98f2cf21d697"
+content-hash = "93189a7289acc20c18e5e3caab66a8b87a89751313d9c986b65c5b117927ac90"

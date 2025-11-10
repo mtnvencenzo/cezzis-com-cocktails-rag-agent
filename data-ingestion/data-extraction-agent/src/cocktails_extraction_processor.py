@@ -2,7 +2,7 @@ import json
 import logging
 from typing import ContextManager
 
-from cezzis_kafka import IKafkaMessageProcessor, KafkaConsumerSettings, KafkaProducer, KafkaProducerSettings
+from cezzis_kafka import IAsyncKafkaMessageProcessor, KafkaConsumerSettings, KafkaProducer, KafkaProducerSettings
 from confluent_kafka import Consumer, KafkaError, Message
 from opentelemetry import trace
 from opentelemetry.propagate import extract
@@ -12,8 +12,8 @@ from app_settings import settings
 from cocktail_models import CocktailModel
 
 
-class CocktailsExtractionProcessor(IKafkaMessageProcessor):
-    """Concrete implementation of IKafkaMessageProcessor for processing cocktail extraction messages from Kafka.
+class CocktailsExtractionProcessor(IAsyncKafkaMessageProcessor):
+    """Concrete implementation of IAsyncKafkaMessageProcessor for processing cocktail extraction messages from Kafka.
 
     Attributes:
         _logger (logging.Logger): Logger instance for logging messages.
@@ -68,7 +68,7 @@ class CocktailsExtractionProcessor(IKafkaMessageProcessor):
         self._tracer = trace.get_tracer(__name__)
 
     @staticmethod
-    def CreateNew(kafka_settings: KafkaConsumerSettings) -> IKafkaMessageProcessor:
+    def CreateNew(kafka_settings: KafkaConsumerSettings) -> IAsyncKafkaMessageProcessor:
         """Factory method to create a new instance of CocktailsExtractionProcessor.
 
         Args:
@@ -89,19 +89,19 @@ class CocktailsExtractionProcessor(IKafkaMessageProcessor):
         """
         return self._kafka_consumer_settings
 
-    def consumer_creating(self) -> None:
+    async def consumer_creating(self) -> None:
         pass
 
-    def consumer_created(self, consumer: Consumer | None) -> None:
+    async def consumer_created(self, consumer: Consumer | None) -> None:
         pass
 
-    def consumer_subscribed(self) -> None:
+    async def consumer_subscribed(self) -> None:
         pass
 
-    def consumer_stopping(self) -> None:
+    async def consumer_stopping(self) -> None:
         pass
 
-    def message_received(self, msg: Message) -> None:
+    async def message_received(self, msg: Message) -> None:
         # Create a span for processing this Kafka message, linked to the API trace
         with self._create_kafka_consumer_read_span(self._tracer, "cocktail-extraction-message-processing", msg):
             try:
@@ -165,10 +165,10 @@ class CocktailsExtractionProcessor(IKafkaMessageProcessor):
                     },
                 )
 
-    def message_error_received(self, msg: Message) -> None:
+    async def message_error_received(self, msg: Message) -> None:
         pass
 
-    def message_partition_reached(self, msg: Message) -> None:
+    async def message_partition_reached(self, msg: Message) -> None:
         pass
 
     def _create_kafka_consumer_read_span(
@@ -229,6 +229,18 @@ class CocktailsExtractionProcessor(IKafkaMessageProcessor):
             },
         )
 
+        # Get current trace context to propagate to the next consumer
+        from opentelemetry.propagate import inject
+
+        # Create headers dict for trace propagation
+        headers = {}
+        inject(headers)
+
+        # Convert string values to bytes for Kafka headers
+        kafka_headers = {
+            key: value.encode("utf-8") if isinstance(value, str) else value for key, value in headers.items()
+        }
+
         self._logger.info(
             "Sending cocktail extraction result message to embedding topic",
             extra={
@@ -242,6 +254,7 @@ class CocktailsExtractionProcessor(IKafkaMessageProcessor):
             topic=settings.embedding_topic_name,
             key=model.id,
             message=model.model_dump_json().encode("utf-8"),
+            headers=kafka_headers,  # Include trace context headers
             timeout=30.0,
         )
 
