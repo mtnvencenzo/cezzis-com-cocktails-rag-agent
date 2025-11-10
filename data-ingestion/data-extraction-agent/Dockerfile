@@ -12,10 +12,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy requirements file
-COPY requirements.txt .
+COPY .pyproject.toml .
+COPY ./poetry.lock .
+
+RUN pip install poetry
 
 # Install Python dependencies
-RUN pip install --no-cache-dir --user -r requirements.txt
+RUN poetry install --no-root
 
 # Final stage
 FROM python:3.12-slim
