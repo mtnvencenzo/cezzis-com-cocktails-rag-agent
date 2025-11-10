@@ -13,11 +13,11 @@ class OTelOptions(BaseSettings):
         otel_service_namespace (str): OpenTelemetry service namespace.
         otel_otlp_exporter_auth_header (str): OpenTelemetry OTLP exporter authorization header
     """
+
     model_config = SettingsConfigDict(
-        env_file=(".env", f".env.{os.environ.get('ENV')}"),
-        env_file_encoding="utf-8",
-        extra="allow")
-        
+        env_file=(".env", f".env.{os.environ.get('ENV')}"), env_file_encoding="utf-8", extra="allow"
+    )
+
     otel_exporter_otlp_endpoint: str = Field(default="", validation_alias="OTEL_EXPORTER_OTLP_ENDPOINT")
     otel_service_name: str = Field(default="", validation_alias="OTEL_SERVICE_NAME")
     otel_service_namespace: str = Field(default="", validation_alias="OTEL_SERVICE_NAMESPACE")

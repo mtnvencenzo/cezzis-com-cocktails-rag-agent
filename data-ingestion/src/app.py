@@ -43,7 +43,6 @@ async def main() -> None:
     logger.info("OpenTelemetry initialized successfully")
 
     try:
-        # Start both consumer groups concurrently
         await asyncio.gather(
             run_extraction_agent(),
             run_embedding_agent(),
