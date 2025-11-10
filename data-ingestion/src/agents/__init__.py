@@ -1,6 +1,8 @@
-from . import embedding_agent, extraction_agent
+# Agent package - expose runner functions
+from .extraction_agent import run_extraction_agent
+from .embedding_agent import run_embedding_agent
 
 __all__ = [
-    "extraction_agent",
-    "embedding_agent",
+    "run_extraction_agent",
+    "run_embedding_agent"
 ]
