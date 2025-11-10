@@ -1,3 +1,3 @@
-from .otel_settings import get_otel_settings
+from .otel_options import get_otel_options
 
-__all__ = ["get_otel_settings"]
+__all__ = ["get_otel_options"]

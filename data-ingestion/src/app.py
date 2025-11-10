@@ -13,7 +13,7 @@ from opentelemetry.instrumentation.confluent_kafka import (  # type: ignore
 # Application specific imports
 from agents.embedding_agent.emb_agent_app_runner import run_embedding_agent
 from agents.extraction_agent.ext_agent_app_runner import run_extraction_agent
-from behaviors.otel import get_otel_settings
+from behaviors.otel import get_otel_options
 
 logger: logging.Logger = logging.getLogger(__name__)
 
@@ -22,14 +22,14 @@ async def main() -> None:
     """Main function to run the Kafka consumer. Sets up OpenTelemetry and starts consumers."""
     global logger
 
-    otel_settings = get_otel_settings()
+    otel_options = get_otel_options()
 
     initialize_otel(
         settings=OTelSettings(
-            service_name=otel_settings.otel_service_name,
-            service_namespace=otel_settings.otel_service_namespace,
-            otlp_exporter_endpoint=otel_settings.otel_exporter_otlp_endpoint,
-            otlp_exporter_auth_header=otel_settings.otel_otlp_exporter_auth_header,
+            service_name=otel_options.otel_service_name,
+            service_namespace=otel_options.otel_service_namespace,
+            otlp_exporter_endpoint=otel_options.otel_exporter_otlp_endpoint,
+            otlp_exporter_auth_header=otel_options.otel_otlp_exporter_auth_header,
             service_version=__version__,
             environment=os.environ.get("ENV", "unknown"),
             instance_id=socket.gethostname(),
