@@ -1,0 +1,67 @@
+import asyncio
+import atexit
+import logging
+import os
+import socket
+
+from cezzis_kafka import shutdown_consumers
+from cezzis_otel import OTelSettings, __version__, initialize_otel, shutdown_otel
+from opentelemetry.instrumentation.confluent_kafka import (  # type: ignore
+    ConfluentKafkaInstrumentor,
+)
+
+# Application specific imports
+from agents.embedding_agent.emb_agent_app_runner import run_embedding_agent
+from agents.extraction_agent.ext_agent_app_runner import run_extraction_agent
+from behaviors.otel import get_otel_settings
+
+logger: logging.Logger = logging.getLogger(__name__)
+
+
+async def main() -> None:
+    """Main function to run the Kafka consumer. Sets up OpenTelemetry and starts consumers."""
+    global logger
+
+    otel_settings = get_otel_settings()
+
+    initialize_otel(
+        settings=OTelSettings(
+            service_name=otel_settings.otel_service_name,
+            service_namespace=otel_settings.otel_service_namespace,
+            otlp_exporter_endpoint=otel_settings.otel_exporter_otlp_endpoint,
+            otlp_exporter_auth_header=otel_settings.otel_otlp_exporter_auth_header,
+            service_version=__version__,
+            environment=os.environ.get("ENV", "unknown"),
+            instance_id=socket.gethostname(),
+            enable_logging=True,
+            enable_tracing=True,
+        ),
+        configure_tracing=lambda _: ConfluentKafkaInstrumentor().instrument(),
+    )
+
+    logger = logging.getLogger(__name__)
+    logger.info("OpenTelemetry initialized successfully")
+
+    try:
+        # Start both consumer groups concurrently
+        await asyncio.gather(
+            run_extraction_agent(),
+            run_embedding_agent(),
+        )
+    except asyncio.CancelledError:
+        logger.info("Application cancelled")
+    except Exception as e:
+        logger.error("Application error", exc_info=True, extra={"error": str(e)})
+        raise
+
+
+if __name__ == "__main__":
+    atexit.register(shutdown_otel)
+
+    try:
+        print("Starting Cocktail Data Ingestion Agent...")
+        asyncio.run(main())
+    except KeyboardInterrupt:
+        logger.info("Keyboard interrupt received. Shutting down...")
+    finally:
+        shutdown_consumers()
