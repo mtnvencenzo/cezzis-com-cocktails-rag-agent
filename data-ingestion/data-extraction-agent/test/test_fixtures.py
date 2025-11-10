@@ -29,13 +29,13 @@ def clear_settings_cache() -> Generator[None, None, None]:
     import sys
 
     # Remove the module from sys.modules to force a fresh import
-    modules_to_remove = [key for key in sys.modules.keys() if key.startswith("app_settings")]
+    modules_to_remove = [key for key in sys.modules.keys() if key.startswith(("app_settings", "config"))]
     for module in modules_to_remove:
         del sys.modules[module]
 
     yield
 
     # Clean up after test
-    modules_to_remove = [key for key in sys.modules.keys() if key.startswith("app_settings")]
+    modules_to_remove = [key for key in sys.modules.keys() if key.startswith(("app_settings", "config"))]
     for module in modules_to_remove:
         del sys.modules[module]
