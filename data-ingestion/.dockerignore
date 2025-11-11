@@ -30,9 +30,6 @@ requirements-dev.txt
 .gitignore
 .gitattributes
 
-# Documentation
-*.md
-README.md
 
 # Docker
 .dockerignore
@@ -44,9 +41,6 @@ README.md
 .ruff_cache/
 .ruff.toml
 pytest.ini
-
-# Environment files (should be provided at runtime)
-.env*
 
 # Logs
 *.log

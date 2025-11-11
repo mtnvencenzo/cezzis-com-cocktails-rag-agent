@@ -1,4 +1,6 @@
+# ------------------------------------------------------------------------
 # CI/CD Dockerfile - expects artifact to be extracted in current directory
+# ------------------------------------------------------------------------
 FROM python:3.12-slim AS final
 
 # Set working directory

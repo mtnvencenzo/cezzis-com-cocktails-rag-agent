@@ -18,7 +18,7 @@ logger: logging.Logger = logging.getLogger(__name__)
 
 
 async def main() -> None:
-    """Main function to run the Kafka consumer. Sets up OpenTelemetry and starts consumers."""
+    """Main function to run the cocktails data ingestion agentic workflow."""
     global logger
 
     otel_options = get_otel_options()
@@ -40,6 +40,7 @@ async def main() -> None:
 
     logger = logging.getLogger(__name__)
     logger.info("OpenTelemetry initialized successfully")
+    logger.info("Starting Cocktail Ingestion Agentic Workflow...")
 
     try:
         await asyncio.gather(
@@ -57,7 +58,6 @@ if __name__ == "__main__":
     atexit.register(shutdown_otel)
 
     try:
-        logger.info("Starting Cocktail Ingestion Agentic Workflow...")
         asyncio.run(main())
     except KeyboardInterrupt:
         logger.info("Keyboard interrupt received. Shutting down...")
