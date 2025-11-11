@@ -9,7 +9,7 @@ from opentelemetry import trace
 from opentelemetry.propagate import extract
 from opentelemetry.trace import Span
 
-from .emb_agent_app_settings import get_emb_agent_settings
+from .emb_agent_app_options import get_emb_agent_options
 
 
 class CocktailsEmbeddingProcessor(IAsyncKafkaMessageProcessor):
@@ -58,7 +58,7 @@ class CocktailsEmbeddingProcessor(IAsyncKafkaMessageProcessor):
         self._logger: logging.Logger = logging.getLogger(__name__)
         self._kafka_consumer_settings = kafka_consumer_settings
         self._tracer = trace.get_tracer(__name__)
-        self._settings = get_emb_agent_settings()
+        self._options = get_emb_agent_options()
 
     @staticmethod
     def CreateNew(kafka_settings: KafkaConsumerSettings) -> IAsyncKafkaMessageProcessor:
@@ -237,7 +237,7 @@ class CocktailsEmbeddingProcessor(IAsyncKafkaMessageProcessor):
             "Sending cocktail embedding result to vector database",
             extra={
                 "messaging.kafka.bootstrap_servers": self._kafka_consumer_settings.bootstrap_servers,
-                "messaging.kafka.topic_name": self._settings.embedding_topic_name,
+                "messaging.kafka.topic_name": self._options.embedding_topic_name,
                 "cocktail.id": model.id,
             },
         )

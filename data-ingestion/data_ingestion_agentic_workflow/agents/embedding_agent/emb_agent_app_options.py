@@ -1,10 +1,11 @@
+import logging
 import os
 
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
-class EmbeddingAgentAppSettings(BaseSettings):
+class EmbeddingAgentAppOptions(BaseSettings):
     """Application settings loaded from environment variables and .env files.
 
     Attributes:
@@ -24,35 +25,37 @@ class EmbeddingAgentAppSettings(BaseSettings):
     num_consumers: int = Field(default=1, validation_alias="KAFKA_NUM_CONSUMERS")
 
 
-_emb_agent_settings: EmbeddingAgentAppSettings | None = None
+_logger: logging.Logger = logging.getLogger(__name__)
+
+_emb_agent_options: EmbeddingAgentAppOptions | None = None
 
 
-def get_emb_agent_settings() -> EmbeddingAgentAppSettings:
-    """Get the singleton instance of EmbeddingAgentAppSettings.
+def get_emb_agent_options() -> EmbeddingAgentAppOptions:
+    """Get the singleton instance of EmbeddingAgentAppOptions.
 
     Returns:
-        EmbeddingAgentAppSettings: The application settings instance.
+        EmbeddingAgentEmbeddingAgentAppOptionsOptions: The application settings instance.
     """
-    global _emb_agent_settings
-    if _emb_agent_settings is None:
-        _emb_agent_settings = EmbeddingAgentAppSettings()
+    global _emb_agent_options
+    if _emb_agent_options is None:
+        _emb_agent_options = EmbeddingAgentAppOptions()
 
         # Validate required configuration
-        if not _emb_agent_settings.bootstrap_servers:
+        if not _emb_agent_options.bootstrap_servers:
             raise ValueError("KAFKA_BOOTSTRAP_SERVERS environment variable is required")
-        if not _emb_agent_settings.consumer_group:
+        if not _emb_agent_options.consumer_group:
             raise ValueError("KAFKA_CONSUMER_GROUP environment variable is required")
-        if not _emb_agent_settings.embedding_topic_name:
+        if not _emb_agent_options.embedding_topic_name:
             raise ValueError("KAFKA_EMBEDDING_TOPIC_NAME environment variable is required")
-        if not _emb_agent_settings.num_consumers or _emb_agent_settings.num_consumers < 1:
+        if not _emb_agent_options.num_consumers or _emb_agent_options.num_consumers < 1:
             raise ValueError("KAFKA_NUM_CONSUMERS environment variable must be a positive integer")
 
-        print("Embedding agent app settings loaded successfully.")
+        _logger.info("Embedding agent app settings loaded successfully.")
 
-    return _emb_agent_settings
+    return _emb_agent_options
 
 
-def clear_emb_agent_settings_cache() -> None:
-    """Clear the cached settings instance. Useful for testing."""
-    global _emb_agent_settings
-    _emb_agent_settings = None
+def clear_emb_agent_options_cache() -> None:
+    """Clear the cached options instance. Useful for testing."""
+    global _emb_agent_options
+    _emb_agent_options = None

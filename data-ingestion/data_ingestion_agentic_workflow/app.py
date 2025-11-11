@@ -57,7 +57,7 @@ if __name__ == "__main__":
     atexit.register(shutdown_otel)
 
     try:
-        print("Starting Cocktail Data Ingestion Agent...")
+        logger.info("Starting Cocktail Ingestion Agentic Workflow...")
         asyncio.run(main())
     except KeyboardInterrupt:
         logger.info("Keyboard interrupt received. Shutting down...")

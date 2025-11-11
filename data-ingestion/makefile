@@ -1,9 +1,9 @@
-.PHONY: install build test lint format standards test coverage models
+.PHONY: install update build test lint format standards test coverage models
 
 install:
 	poetry install
 
-install:
+update:
 	poetry update
 
 build:

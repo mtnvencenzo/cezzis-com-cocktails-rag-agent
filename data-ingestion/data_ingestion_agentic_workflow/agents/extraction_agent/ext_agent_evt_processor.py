@@ -10,7 +10,7 @@ from opentelemetry.propagate import extract
 from opentelemetry.trace import Span
 from pydantic import ValidationError
 
-from .ext_agent_app_settings import get_ext_agent_settings
+from .ext_agent_app_options import get_ext_agent_options
 
 
 class CocktailsExtractionProcessor(IAsyncKafkaMessageProcessor):
@@ -59,11 +59,11 @@ class CocktailsExtractionProcessor(IAsyncKafkaMessageProcessor):
 
         self._logger: logging.Logger = logging.getLogger(__name__)
         self._kafka_consumer_settings = kafka_consumer_settings
-        self._settings = get_ext_agent_settings()
+        self._options = get_ext_agent_options()
 
         self.producer = KafkaProducer(
             settings=KafkaProducerSettings(
-                bootstrap_servers=self._settings.bootstrap_servers, on_delivery=self._on_delivered_to_embedding_topic
+                bootstrap_servers=self._options.bootstrap_servers, on_delivery=self._on_delivered_to_embedding_topic
             )
         )
 
@@ -279,13 +279,13 @@ class CocktailsExtractionProcessor(IAsyncKafkaMessageProcessor):
             "Sending cocktail extraction result message to embedding topic",
             extra={
                 "messaging.kafka.bootstrap_servers": self._kafka_consumer_settings.bootstrap_servers,
-                "messaging.kafka.topic_name": self._settings.embedding_topic_name,
+                "messaging.kafka.topic_name": self._options.embedding_topic_name,
                 "cocktail.id": model.id,
             },
         )
 
         self.producer.send_and_wait(
-            topic=self._settings.embedding_topic_name,
+            topic=self._options.embedding_topic_name,
             key=model.id,
             message=model.model_dump_json().encode("utf-8"),
             headers=kafka_headers,  # Include trace context headers
