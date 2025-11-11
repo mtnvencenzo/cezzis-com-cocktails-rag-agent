@@ -1,17 +1,17 @@
-name: cicd-cezzis-rag-data-ingestion
+name: cicd-cezzis-data-ingestion-agentic-wf
 
 on:
   pull_request:
     branches: [main]
     paths: [
       data-ingestion/**,
-      .github/workflows/cezzis-rag-data-ingestion-cicd.yaml
+      .github/workflows/ccezzis-data-ingestion-agentic-wf-cicd.yaml
     ]
   push:
     branches: [main]
     paths: [
       data-ingestion/data-extraction-agent/**,
-      .github/workflows/cezzis-rag-data-ingestion-cicd.yaml
+      .github/workflows/cezzis-data-ingestion-agentic-wf-cicd.yaml
     ]
 
   workflow_dispatch:
@@ -47,12 +47,12 @@ jobs:
     uses: mtnvencenzo/workflows/.github/workflows/py-simple-build.yaml@main
     with:
       python_version: '3.12'
-      working_directory: './data-ingestion/data-extraction-agent'
+      working_directory: './data-ingestion'
       ruff_config: '.ruff.toml'
       pytest_args: '-v'
       coverage_source: 'data_ingestion_agentic_workflow'
       upload_artifact: true
-      artifact_name: 'cocktails-rag-data-ingestion-agent'
+      artifact_name: 'cocktails-data_ingestion_agentic_workflow'
       setup_files: '["./Dockerfile-CI"]'
       version: ${{ needs.gitVersion.outputs.semVer }}
 
@@ -61,13 +61,13 @@ jobs:
     needs: [build, gitVersion]
     uses: mtnvencenzo/workflows/.github/workflows/docker-build-and-push.yaml@main
     with:
-      working_directory: './data-ingestion/data-extraction-agent'
+      working_directory: './data-ingestion'
       allow_build_and_push: ${{ (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref_name == 'main' }}
-      artifact_name: 'cocktails-rag-data-ingestion-agent'
+      artifact_name: 'cocktails-data_ingestion_agentic_workflow'
       docker_file_name: 'Dockerfile-CI'
       image_tag: '${{ github.sha }}'
       acr_registry_login_server: 'acrveceusgloshared001.azurecr.io'
-      acr_image_repository: 'cocktailsragdataingestionagent'
+      acr_image_repository: 'cocktailsdataingestionagenticwf'
     secrets:
       acr_registry_login_username: ${{ secrets.ACR_REGISTRY_USERNAME }}
       acr_registry_login_password: ${{ secrets.ACR_REGISTRY_PASSWORD }}
