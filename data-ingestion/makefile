@@ -1,28 +1,44 @@
-.PHONY: install build test shell ruff-check ruff-format coverage standards
+.PHONY: install build test lint format standards test coverage models
 
 install:
-	poetry install --no-root
+	poetry install
 
-shell:
-	poetry shell
+install:
+	poetry update
 
-ruff-check:
+build:
+	poetry build
+
+lint:
 	poetry run ruff check --fix . --config .ruff.toml
 
-ruff-format:
+format:
 	poetry run ruff format . --config .ruff.toml
+
+standards:
+	@make lint
+	@echo "Code standards check complete."
+	@make format
+	@echo "Code formatting complete."
 
 test:
 	poetry run pytest
 
-models:
-	poetry run datamodel-codegen --url "https://api.cezzis.com/prd/cocktails/api-docs/v1/scalar/v1/openapi.json" --input-file-type openapi --output data_ingestion_agentic_workflow/models/cocktail_models.py --output-model-type pydantic_v2.BaseModel --field-constraints --use-default --use-schema-description --target-python-version 3.12
-
 coverage:
 	poetry run pytest -v --cov=data_ingestion_agentic_workflow --cov-report=xml:coverage.xml --cov-report=term --junitxml=pytest-results.xml
 
-standards:
-	@make ruff-check
-	@echo "Code standards check complete."
-	@make ruff-format
-	@echo "Code formatting complete."
+models:
+	poetry run datamodel-codegen \
+		--url "https://api.cezzis.com/prd/cocktails/api-docs/v1/scalar/v1/openapi.json" \
+		--input-file-type openapi --output data_ingestion_agentic_workflow/models/cocktail_models.py \
+		--output-model-type pydantic_v2.BaseModel \
+		--field-constraints --use-default \
+		--use-schema-description \
+		--target-python-version 3.12
+
+all:
+	@make install
+	@make models
+	@make standards
+	@make coverage
+	@make build

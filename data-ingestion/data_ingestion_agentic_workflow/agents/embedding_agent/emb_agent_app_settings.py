@@ -15,9 +15,8 @@ class EmbeddingAgentAppSettings(BaseSettings):
     """
 
     model_config = SettingsConfigDict(
-        env_file=(".env", f".env.{os.environ.get('ENV')}"),
-        env_file_encoding="utf-8",
-        extra="allow")
+        env_file=(".env", f".env.{os.environ.get('ENV')}"), env_file_encoding="utf-8", extra="allow"
+    )
 
     bootstrap_servers: str = Field(default="", validation_alias="KAFKA_BOOTSTRAP_SERVERS")
     consumer_group: str = Field(default="", validation_alias="KAFKA_CONSUMER_GROUP")

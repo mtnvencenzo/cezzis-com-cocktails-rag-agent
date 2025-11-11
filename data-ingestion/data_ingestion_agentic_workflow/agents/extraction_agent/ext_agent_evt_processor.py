@@ -4,12 +4,11 @@ from typing import ContextManager
 
 from cezzis_kafka import IAsyncKafkaMessageProcessor, KafkaConsumerSettings, KafkaProducer, KafkaProducerSettings
 from confluent_kafka import Consumer, KafkaError, Message
+from models.cocktail_models import CocktailModel
 from opentelemetry import trace
 from opentelemetry.propagate import extract
 from opentelemetry.trace import Span
 from pydantic import ValidationError
-
-from models.cocktail_models import CocktailModel
 
 from .ext_agent_app_settings import get_ext_agent_settings
 

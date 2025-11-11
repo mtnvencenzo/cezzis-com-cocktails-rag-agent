@@ -1,5 +1,4 @@
 import logging
-from types import CoroutineType
 from typing import Any, Coroutine
 
 from cezzis_kafka import spawn_consumers_async

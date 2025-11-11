@@ -1,6 +1,5 @@
-from collections.abc import Coroutine
 import logging
-from types import CoroutineType
+from collections.abc import Coroutine
 from typing import Any
 
 from cezzis_kafka import spawn_consumers_async
@@ -29,4 +28,3 @@ def run_embedding_agent() -> Coroutine[Any, Any, None]:
         consumer_group=settings.consumer_group,
         topic_name=settings.embedding_topic_name,
     )
-

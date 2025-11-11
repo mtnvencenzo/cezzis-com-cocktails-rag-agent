@@ -4,16 +4,15 @@ import logging
 import os
 import socket
 
+# Application specific imports
+from agents.embedding_agent.emb_agent_app_runner import run_embedding_agent
+from agents.extraction_agent.ext_agent_app_runner import run_extraction_agent
+from behaviors.otel import get_otel_options
 from cezzis_kafka import shutdown_consumers
 from cezzis_otel import OTelSettings, __version__, initialize_otel, shutdown_otel
 from opentelemetry.instrumentation.confluent_kafka import (  # type: ignore
     ConfluentKafkaInstrumentor,
 )
-
-# Application specific imports
-from agents.embedding_agent.emb_agent_app_runner import run_embedding_agent
-from agents.extraction_agent.ext_agent_app_runner import run_extraction_agent
-from behaviors.otel import get_otel_options
 
 logger: logging.Logger = logging.getLogger(__name__)
 
