@@ -16,10 +16,10 @@ test:
 	poetry run pytest
 
 models:
-	poetry run datamodel-codegen --url "https://api.cezzis.com/prd/cocktails/api-docs/v1/scalar/v1/openapi.json" --input-file-type openapi --output src/models/cocktail_models.py --output-model-type pydantic_v2.BaseModel --field-constraints --use-default --use-schema-description --target-python-version 3.12
+	poetry run datamodel-codegen --url "https://api.cezzis.com/prd/cocktails/api-docs/v1/scalar/v1/openapi.json" --input-file-type openapi --output data_ingestion_agentic_workflow/models/cocktail_models.py --output-model-type pydantic_v2.BaseModel --field-constraints --use-default --use-schema-description --target-python-version 3.12
 
 coverage:
-	poetry run pytest -v --cov=src --cov-report=xml:coverage.xml --cov-report=term --junitxml=pytest-results.xml
+	poetry run pytest -v --cov=data_ingestion_agentic_workflow --cov-report=xml:coverage.xml --cov-report=term --junitxml=pytest-results.xml
 
 standards:
 	@make ruff-check

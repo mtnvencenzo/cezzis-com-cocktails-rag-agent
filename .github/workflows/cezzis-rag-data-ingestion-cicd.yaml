@@ -50,7 +50,7 @@ jobs:
       working_directory: './data-ingestion/data-extraction-agent'
       ruff_config: '.ruff.toml'
       pytest_args: '-v'
-      coverage_source: 'src'
+      coverage_source: 'data_ingestion_agentic_workflow'
       upload_artifact: true
       artifact_name: 'cocktails-rag-data-ingestion-agent'
       setup_files: '["./Dockerfile-CI"]'

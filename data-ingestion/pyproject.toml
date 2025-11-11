@@ -1,5 +1,5 @@
 [project]
-name = "cezzis-cocktail-data-ingestion-agentic-workflow"
+name = "data_ingestion_agentic_workflow"
 version = "0.0.1"
 description = "The cezzis rag data extraction agent is designed as the first step in text embedding the cezzis.com data.  This agent receives the raw cocktail data in json format then attempts to clean it and pass it to the next agent."
 authors = [
@@ -13,6 +13,15 @@ dependencies = [
     "cezzis-otel (>=0.0.4)",
     "opentelemetry-instrumentation-confluent-kafka (>=0.59b0,<0.60)",
     "cezzis-kafka (>=0.0.6)"
+]
+
+[tool.poetry]
+exclude = [
+    "**/test_*.py", # Excludes files starting with 'test_'
+    "**/*_test.py", # Excludes files ending with '_test.py'
+    "**/tests/**/*.py", # Excludes all .py files within 'tests' directories
+    "**/tests", # Excludes the 'tests' directory itself
+    "**/*test*.py", # More general pattern to exclude any .py file with 'test' in its name
 ]
 
 [build-system]

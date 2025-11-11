@@ -75,7 +75,7 @@ Cocktails API → Kafka Topic → Data Extraction Agent → Vector Store → Sem
 
 ```text
 data-extraction-agent/
-├── src/
+├── data_ingestion_agentic_workflow/
 │   ├── app.py                 # Main application entry point
 │   ├── app_settings.py        # Configuration management
 │   └── __pycache__/
@@ -145,7 +145,7 @@ OTEL_EXPORTER_OTLP_HEADERS=key1=value1,key2=value2
 ### 5) Run Locally
 ```bash
 # Option 1: Direct Python execution
-python src/app.py
+python data_ingestion_agentic_workflow/app.py
 
 # Option 2: Using Make
 make run
