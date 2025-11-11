@@ -38,11 +38,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     librdkafka1 \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy the built package from builder
-COPY --from=builder /app/src/dist/data_ingestion_agentic_workflow-0.0.1.tar.gz ./
+# Copy the built package from builder (using wildcard to avoid version hardcoding)
+COPY --from=builder /app/src/dist/*.tar.gz ./
 
-# Install the package
-RUN pip install --no-cache-dir data_ingestion_agentic_workflow-0.0.1.tar.gz
+# Install the package (using wildcard to handle any version)
+RUN pip install --no-cache-dir *.tar.gz && rm *.tar.gz
 
 # Set Python to run in unbuffered mode for better logging
 ENV PYTHONUNBUFFERED=1
@@ -53,9 +53,6 @@ RUN useradd -m -u 1000 appuser && \
 
 # Switch to non-root user
 USER appuser
-
-# Set the working directory to dist where app.py is located
-WORKDIR /app/dist
 
 # Run the application using the installed package
 CMD ["python", "-m", "data_ingestion_agentic_workflow.app"]

@@ -4,7 +4,7 @@ from typing import ContextManager
 
 from cezzis_kafka import IAsyncKafkaMessageProcessor, KafkaConsumerSettings
 from confluent_kafka import Consumer, Message
-from models.cocktail_models import CocktailModel
+from ...models.cocktail_models import CocktailModel
 from opentelemetry import trace
 from opentelemetry.propagate import extract
 from opentelemetry.trace import Span
