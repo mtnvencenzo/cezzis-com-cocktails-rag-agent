@@ -5,12 +5,12 @@ on:
     branches: [main]
     paths: [
       data-ingestion/**,
-      .github/workflows/ccezzis-data-ingestion-agentic-wf-cicd.yaml
+      .github/workflows/cezzis-data-ingestion-agentic-wf-cicd.yaml
     ]
   push:
     branches: [main]
     paths: [
-      data-ingestion/data-extraction-agent/**,
+      data-ingestion/**,
       .github/workflows/cezzis-data-ingestion-agentic-wf-cicd.yaml
     ]
 
