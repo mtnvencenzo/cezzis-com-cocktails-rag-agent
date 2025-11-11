@@ -9,6 +9,11 @@ venv/
 ENV/
 env/
 
+# Environment files (security - don't include in images)
+.env
+.env.*
+*.env
+
 # Testing
 .pytest_cache/
 .coverage
