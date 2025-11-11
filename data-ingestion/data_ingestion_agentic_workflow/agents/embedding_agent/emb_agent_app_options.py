@@ -34,7 +34,7 @@ def get_emb_agent_options() -> EmbeddingAgentAppOptions:
     """Get the singleton instance of EmbeddingAgentAppOptions.
 
     Returns:
-        EmbeddingAgentEmbeddingAgentAppOptionsOptions: The application settings instance.
+        EmbeddingAgentAppOptions: The application settings instance.
     """
     global _emb_agent_options
     if _emb_agent_options is None:

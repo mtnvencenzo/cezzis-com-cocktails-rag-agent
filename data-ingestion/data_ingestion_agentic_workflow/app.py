@@ -3,13 +3,13 @@ import atexit
 import logging
 import os
 import socket
+from importlib.metadata import version
 
 # Application specific imports
-from agents.embedding_agent.emb_agent_app_runner import run_embedding_agent
-from agents.extraction_agent.ext_agent_app_runner import run_extraction_agent
+from agents import run_embedding_agent, run_extraction_agent
 from behaviors.otel import get_otel_options
 from cezzis_kafka import shutdown_consumers
-from cezzis_otel import OTelSettings, __version__, initialize_otel, shutdown_otel
+from cezzis_otel import OTelSettings, initialize_otel, shutdown_otel
 from opentelemetry.instrumentation.confluent_kafka import (  # type: ignore
     ConfluentKafkaInstrumentor,
 )
@@ -29,7 +29,7 @@ async def main() -> None:
             service_namespace=otel_options.otel_service_namespace,
             otlp_exporter_endpoint=otel_options.otel_exporter_otlp_endpoint,
             otlp_exporter_auth_header=otel_options.otel_otlp_exporter_auth_header,
-            service_version=__version__,
+            service_version=version("data_ingestion_agentic_workflow"),
             environment=os.environ.get("ENV", "unknown"),
             instance_id=socket.gethostname(),
             enable_logging=True,
