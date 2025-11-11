@@ -5,14 +5,15 @@ import os
 import socket
 from importlib.metadata import version
 
-# Application specific imports
-from .agents import run_embedding_agent, run_extraction_agent
-from .behaviors.otel import get_otel_options
 from cezzis_kafka import shutdown_consumers
 from cezzis_otel import OTelSettings, initialize_otel, shutdown_otel
 from opentelemetry.instrumentation.confluent_kafka import (  # type: ignore
     ConfluentKafkaInstrumentor,
 )
+
+# Application specific imports
+from data_ingestion_agentic_workflow.agents import run_embedding_agent, run_extraction_agent
+from data_ingestion_agentic_workflow.behaviors.otel import get_otel_options
 
 logger: logging.Logger = logging.getLogger(__name__)
 

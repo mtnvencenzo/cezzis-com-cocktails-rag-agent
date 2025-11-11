@@ -19,7 +19,10 @@ A Kafka consumer application that processes cocktail data updates in real-time a
 ```bash
 docker build -t cezzis-ingestion-agentic-workflow:latest .
 
-docker run -d --name cezzis-ingestion-agentic-workflow --network=host cezzis-ingestion-agentic-workflow:latest
+docker run -d \
+  --env ENV="local" \
+  --name cezzis-ingestion-agentic-workflow \
+  --network=host cezzis-ingestion-agentic-workflow:latest
 
 ```
 

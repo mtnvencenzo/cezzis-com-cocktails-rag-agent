@@ -4,10 +4,11 @@ from typing import ContextManager
 
 from cezzis_kafka import IAsyncKafkaMessageProcessor, KafkaConsumerSettings
 from confluent_kafka import Consumer, Message
-from data_ingestion_agentic_workflow.models.cocktail_models import CocktailModel
 from opentelemetry import trace
 from opentelemetry.propagate import extract
 from opentelemetry.trace import Span
+
+from data_ingestion_agentic_workflow.models.cocktail_models import CocktailModel
 
 from .emb_agent_app_options import get_emb_agent_options
 
