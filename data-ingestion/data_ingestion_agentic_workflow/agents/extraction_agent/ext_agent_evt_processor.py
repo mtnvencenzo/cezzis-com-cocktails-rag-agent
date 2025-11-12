@@ -69,7 +69,6 @@ class CocktailsExtractionProcessor(IAsyncKafkaMessageProcessor):
             )
         )
 
-
     @staticmethod
     def CreateNew(kafka_settings: KafkaConsumerSettings) -> IAsyncKafkaMessageProcessor:
         """Factory method to create a new instance of CocktailsExtractionProcessor.
