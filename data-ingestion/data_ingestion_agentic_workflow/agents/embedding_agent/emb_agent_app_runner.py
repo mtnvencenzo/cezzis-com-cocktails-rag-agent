@@ -7,7 +7,7 @@ from cezzis_kafka import spawn_consumers_async
 from .emb_agent_app_options import get_emb_agent_options
 from .emb_agent_evt_processor import CocktailsEmbeddingProcessor
 
-logger: logging.Logger = logging.getLogger(__name__)
+logger: logging.Logger = logging.getLogger("emb_agent_app_runner")
 
 
 def run_embedding_agent() -> Coroutine[Any, Any, None]:
@@ -17,9 +17,8 @@ def run_embedding_agent() -> Coroutine[Any, Any, None]:
         CoroutineType[Any, Any, None]: Coroutine object to run the embedding agent consumers
     """
 
-    options = get_emb_agent_options()
-    logger = logging.getLogger(__name__)
     logger.info("Starting Cocktail Embedding Agent")
+    options = get_emb_agent_options()
 
     return spawn_consumers_async(
         factory_type=CocktailsEmbeddingProcessor,

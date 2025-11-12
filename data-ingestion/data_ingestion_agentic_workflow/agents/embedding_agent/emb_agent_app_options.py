@@ -25,7 +25,7 @@ class EmbeddingAgentAppOptions(BaseSettings):
     num_consumers: int = Field(default=1, validation_alias="KAFKA_NUM_CONSUMERS")
 
 
-_logger: logging.Logger = logging.getLogger(__name__)
+_logger: logging.Logger = logging.getLogger("emb_agent_app_options")
 
 _emb_agent_options: EmbeddingAgentAppOptions | None = None
 

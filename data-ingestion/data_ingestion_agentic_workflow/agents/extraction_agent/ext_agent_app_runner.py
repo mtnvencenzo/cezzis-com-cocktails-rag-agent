@@ -6,7 +6,7 @@ from cezzis_kafka import spawn_consumers_async
 from .ext_agent_app_options import get_ext_agent_options
 from .ext_agent_evt_processor import CocktailsExtractionProcessor
 
-logger: logging.Logger = logging.getLogger(__name__)
+logger: logging.Logger = logging.getLogger("ext_agent_app_runner")
 
 
 def run_extraction_agent() -> Coroutine[Any, Any, None]:
@@ -16,9 +16,8 @@ def run_extraction_agent() -> Coroutine[Any, Any, None]:
         CoroutineType[Any, Any, None]: Coroutine object to run the extraction agent consumers
     """
 
-    options = get_ext_agent_options()
-    logger = logging.getLogger(__name__)
     logger.info("Starting Cocktail Extraction Agent")
+    options = get_ext_agent_options()
 
     return spawn_consumers_async(
         factory_type=CocktailsExtractionProcessor,

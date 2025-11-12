@@ -4,11 +4,12 @@ from typing import ContextManager
 
 from cezzis_kafka import IAsyncKafkaMessageProcessor, KafkaConsumerSettings, KafkaProducer, KafkaProducerSettings
 from confluent_kafka import Consumer, KafkaError, Message
-from models.cocktail_models import CocktailModel
 from opentelemetry import trace
 from opentelemetry.propagate import extract
 from opentelemetry.trace import Span
 from pydantic import ValidationError
+
+from data_ingestion_agentic_workflow.models.cocktail_models import CocktailModel
 
 from .ext_agent_app_options import get_ext_agent_options
 
@@ -57,7 +58,8 @@ class CocktailsExtractionProcessor(IAsyncKafkaMessageProcessor):
             None
         """
 
-        self._logger: logging.Logger = logging.getLogger(__name__)
+        self._logger: logging.Logger = logging.getLogger("ext_agent_evt_processor")
+        self._tracer = trace.get_tracer("ext_agent_evt_processor")
         self._kafka_consumer_settings = kafka_consumer_settings
         self._options = get_ext_agent_options()
 
@@ -66,8 +68,6 @@ class CocktailsExtractionProcessor(IAsyncKafkaMessageProcessor):
                 bootstrap_servers=self._options.bootstrap_servers, on_delivery=self._on_delivered_to_embedding_topic
             )
         )
-
-        self._tracer = trace.get_tracer(__name__)
 
     @staticmethod
     def CreateNew(kafka_settings: KafkaConsumerSettings) -> IAsyncKafkaMessageProcessor:
@@ -227,8 +227,7 @@ class CocktailsExtractionProcessor(IAsyncKafkaMessageProcessor):
                     try:
                         carrier[key] = value.decode("utf-8")
                     except UnicodeDecodeError:
-                        logger = logging.getLogger(__name__)
-                        logger.warning(f"Failed to decode header '{key}' as UTF-8, skipping")
+                        self._logger.warning(f"Failed to decode header '{key}' as UTF-8, skipping")
 
         # Extract parent context and create a span as a child of the API trace
         parent_context = extract(carrier)

@@ -4,10 +4,11 @@ from typing import ContextManager
 
 from cezzis_kafka import IAsyncKafkaMessageProcessor, KafkaConsumerSettings
 from confluent_kafka import Consumer, Message
-from models.cocktail_models import CocktailModel
 from opentelemetry import trace
 from opentelemetry.propagate import extract
 from opentelemetry.trace import Span
+
+from data_ingestion_agentic_workflow.models.cocktail_models import CocktailModel
 
 from .emb_agent_app_options import get_emb_agent_options
 
@@ -55,9 +56,9 @@ class CocktailsEmbeddingProcessor(IAsyncKafkaMessageProcessor):
             None
         """
 
-        self._logger: logging.Logger = logging.getLogger(__name__)
+        self._logger: logging.Logger = logging.getLogger("emb_agent_evt_processor")
+        self._tracer = trace.get_tracer("emb_agent_evt_processor")
         self._kafka_consumer_settings = kafka_consumer_settings
-        self._tracer = trace.get_tracer(__name__)
         self._options = get_emb_agent_options()
 
     @staticmethod
@@ -187,8 +188,7 @@ class CocktailsEmbeddingProcessor(IAsyncKafkaMessageProcessor):
                         decoded_value = value.decode("utf-8")
                         carrier[key] = decoded_value
                     except UnicodeDecodeError:
-                        logger = logging.getLogger(__name__)
-                        logger.warning(f"Failed to decode header '{key}' as UTF-8, skipping")
+                        self._logger.warning(f"Failed to decode header '{key}' as UTF-8, skipping")
 
         # Extract parent context and create a span as a child of the API trace
         parent_context = extract(carrier)

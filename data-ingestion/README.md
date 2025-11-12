@@ -11,7 +11,37 @@
 [![Project](https://img.shields.io/badge/project-Cezzis.com%20Cocktails-181717?logo=github&logoColor=white)](https://github.com/users/mtnvencenzo/projects/2)
 [![Website](https://img.shields.io/badge/website-cezzis.com-2ea44f?logo=google-chrome&logoColor=white)](https://www.cezzis.com)
 
+
 A Kafka consumer application that processes cocktail data updates in real-time as part of the Cezzis.com RAG (Retrieval-Augmented Generation) solution. This agent listens for cocktail updates, extracts relevant data, and prepares it for vectorization and semantic search indexing.
+
+
+# Running Docker Local
+```bash
+docker build -t cezzis-ingestion-agentic-workflow:latest .
+
+# Option 1: Using host network (requires IPv4 Kafka config)
+docker run -d \
+  -e ENV=local \
+  -e OTEL_EXPORTER_OTLP_ENDPOINT=http://host.docker.internal:4318 \
+  -e OTEL_SERVICE_NAME=cezzis-ingestion-agentic-workflow \
+  -e OTEL_SERVICE_NAMESPACE=cezzis \
+  -e OTEL_OTLP_AUTH_HEADER="Bearer bd97d99d-f52d-4827-84d5-3760cbc2c8ea" \
+  -e KAFKA_BOOTSTRAP_SERVERS=broker:29092 \
+  -e KAFKA_CONSUMER_GROUP=cezzis-ingestion-agentic-workflow \
+  -e KAFKA_EXTRACTION_TOPIC_NAME=cocktails-update-topic \
+  -e KAFKA_EMBEDDING_TOPIC_NAME=cocktails-embeddings-topic \
+  -e KAFKA_NUM_CONSUMERS=1 \
+  --name cezzis-ingestion-agentic-workflow \
+  --network=kafka-stack_kafka-stack \
+  cezzis-ingestion-agentic-workflow:latest
+
+```
+
+
+
+
+
+
 
 ## 🧩 Cezzis.com RAG Ecosystem
 
