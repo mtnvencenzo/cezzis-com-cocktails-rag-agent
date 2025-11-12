@@ -1,58 +1,46 @@
-# Multi-stage build for smaller final image
-FROM python:3.12-slim AS builder
+# Multi-stage build - use ubuntu with pre-installed tools for speed
+FROM python:3.12-bullseye AS builder
 
-# Set working directory
-WORKDIR /app
-
-# Install system dependencies required for building Python packages
-# Builder stage - need dev libraries to compile confluent-kafka
+# Install only the additional dependencies we need
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    gcc \
-    g++ \
     librdkafka-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # Setup poetry for build and dependency management
 RUN pip install --no-cache-dir poetry
 RUN poetry config virtualenvs.create true
+RUN poetry config installer.parallel true
 
-# Copy application code
-COPY ./pyproject.toml ./src/
-COPY ./poetry.lock ./src/
-COPY ./README.md ./src/
-COPY ./data_ingestion_agentic_workflow/ ./src/data_ingestion_agentic_workflow/
+# Set working directory
+WORKDIR /app/src
+
+# Copy only dependency files first (for better caching)
+COPY ./pyproject.toml ./poetry.lock ./README.md ./
+COPY ./data_ingestion_agentic_workflow/ ./data_ingestion_agentic_workflow/
+
+# Install dependencies with caching optimizations
+RUN poetry install --only=main
 
 # Build the application
-WORKDIR /app/src
-RUN poetry install
 RUN poetry build -o dist -v
 
 # Final stage
 FROM python:3.12-slim
 
-# Set working directory
-WORKDIR /app
-
-# Install runtime dependencies
+# Install runtime dependencies in one layer
 RUN apt-get update && apt-get install -y --no-install-recommends \
     librdkafka1 \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy the built package from builder (using wildcard to avoid version hardcoding)
-COPY --from=builder /app/src/dist/*.tar.gz ./
+# Set working directory
+WORKDIR /app
 
-# Install the package (using wildcard to handle any version)
-RUN pip install --no-cache-dir *.tar.gz && rm *.tar.gz
+# Copy and install the built package efficiently
+COPY --from=builder /app/src/dist/*.tar.gz ./
+RUN pip install --no-cache-dir --disable-pip-version-check *.tar.gz && rm *.tar.gz
 
 # Set Python to run in unbuffered mode for better logging
 ENV PYTHONUNBUFFERED=1
-
-# Create a non-root user for security
-RUN useradd -m -u 1000 appuser && \
-    chown -R appuser:appuser /app
-
-# Switch to non-root user
-USER appuser
 
 # Run the application using the installed package
 CMD ["python", "-m", "data_ingestion_agentic_workflow.app"]
