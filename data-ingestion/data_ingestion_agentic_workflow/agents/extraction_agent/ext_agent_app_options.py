@@ -27,7 +27,7 @@ class ExtractionAgentAppOptions(BaseSettings):
     num_consumers: int = Field(default=1, validation_alias="KAFKA_NUM_CONSUMERS")
 
 
-_logger: logging.Logger = logging.getLogger(__name__)
+_logger: logging.Logger = logging.getLogger("ext_agent_app_options")
 
 _ext_agent_options: ExtractionAgentAppOptions | None = None
 
