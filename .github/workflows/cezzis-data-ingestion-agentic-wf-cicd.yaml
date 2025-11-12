@@ -54,7 +54,7 @@ jobs:
       upload_artifact: true
       artifact_name: 'cocktails_data_ingestion_agentic_workflow'
       unpack_filename: 'data_ingestion_agentic_workflow-${{ needs.gitVersion.outputs.semVer }}.tar.gz'
-      setup_files: '["./Dockerfile", "./README.md", "poetry.lock", "pyproject.toml", ".dockerignore"]'
+      setup_files: '["./Dockerfile", "./README.md", "./poetry.lock", "./pyproject.toml", "./.dockerignore"]'
       version: ${{ needs.gitVersion.outputs.semVer }}
       generate_stubs: false
 
