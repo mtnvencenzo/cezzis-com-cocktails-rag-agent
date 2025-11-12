@@ -58,7 +58,8 @@ class CocktailsExtractionProcessor(IAsyncKafkaMessageProcessor):
             None
         """
 
-        self._logger: logging.Logger = logging.getLogger(__name__)
+        self._logger: logging.Logger = logging.getLogger("ext_agent_evt_processor")
+        self._tracer = trace.get_tracer("ext_agent_evt_processor")
         self._kafka_consumer_settings = kafka_consumer_settings
         self._options = get_ext_agent_options()
 
@@ -68,7 +69,6 @@ class CocktailsExtractionProcessor(IAsyncKafkaMessageProcessor):
             )
         )
 
-        self._tracer = trace.get_tracer(__name__)
 
     @staticmethod
     def CreateNew(kafka_settings: KafkaConsumerSettings) -> IAsyncKafkaMessageProcessor:
@@ -228,8 +228,7 @@ class CocktailsExtractionProcessor(IAsyncKafkaMessageProcessor):
                     try:
                         carrier[key] = value.decode("utf-8")
                     except UnicodeDecodeError:
-                        logger = logging.getLogger(__name__)
-                        logger.warning(f"Failed to decode header '{key}' as UTF-8, skipping")
+                        self._logger.warning(f"Failed to decode header '{key}' as UTF-8, skipping")
 
         # Extract parent context and create a span as a child of the API trace
         parent_context = extract(carrier)

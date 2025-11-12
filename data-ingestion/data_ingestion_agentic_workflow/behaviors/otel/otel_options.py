@@ -25,7 +25,7 @@ class OTelOptions(BaseSettings):
     otel_otlp_exporter_auth_header: str = Field(default="", validation_alias="OTEL_OTLP_AUTH_HEADER")
 
 
-_logger: logging.Logger = logging.getLogger(__name__)
+_logger: logging.Logger = logging.getLogger("otel_options")
 
 _otel_options: OTelOptions | None = None
 
