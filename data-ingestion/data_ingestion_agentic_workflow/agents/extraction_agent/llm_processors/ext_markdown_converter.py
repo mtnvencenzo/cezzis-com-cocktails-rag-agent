@@ -8,21 +8,19 @@ class ExtractionDataMarkdownConverter:
     def __init__(self, ollama_host: str):
         self.llm = OllamaLLM(model="llama3.2:3b", base_url=ollama_host, temperature=0.2, num_predict=1024, verbose=True)
 
-        self._llm_timeout = 600.0
+        self._llm_timeout = 90.0
 
-    async def convert_markdown(self, markdown_text: str) -> str | None:
+    async def convert_markdown(self, markdown_text: str) -> str:
         prompt = self._prompt(markdown_text)
 
-        result: str | None = None
-
         try:
-            result = await asyncio.wait_for(self.llm.ainvoke(prompt), timeout=self._llm_timeout)
+            return await asyncio.wait_for(self.llm.ainvoke(prompt), timeout=self._llm_timeout)
         except asyncio.TimeoutError:
             raise TimeoutError(f"LLM call timed out after {self._llm_timeout} seconds")
         except httpx.HTTPError as e:
             raise ConnectionError(f"HTTP error during LLM call: {e}")
-
-        return result
+        except Exception as e:
+            raise RuntimeError(f"An error occurred during LLM call: {e}")
 
     def _prompt(self, markdown: str) -> str:
         return f"""
@@ -48,8 +46,7 @@ class ExtractionDataMarkdownConverter:
             - Convert sequences like \\" to "
             - Convert sequences like \\\\ to \
         12. Any characters that have been json encoded in the markdown should be decoded in the output.
-        13. Ensure that the 
         
-        Here is the markdown text that needs to be converted.  Please follow the intstructions above:
+        Here is the markdown text that needs to be converted.  Please follow the instructions above:
         {markdown}
         """

@@ -279,7 +279,7 @@ Configuration is managed via agent-specific options classes:
 ## 🐳 Docker Deployment
 
 ### Pull models into Ollama
-```
+```bash
 docker exec ollama ollama pull llama3.2:3b
 ```
 
