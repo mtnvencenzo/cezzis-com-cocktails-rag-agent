@@ -5,7 +5,7 @@ from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
-class ExtractionAgentAppOptions(BaseSettings):
+class ExtractionAgentOptions(BaseSettings):
     """Application settings loaded from environment variables and .env files.
 
     Attributes:
@@ -14,6 +14,7 @@ class ExtractionAgentAppOptions(BaseSettings):
         extraction_topic_name (str): Kafka extraction topic name.
         embedding_topic_name (str): Kafka embedding topic name.
         num_consumers (int): Number of Kafka consumer processes to start.
+        ollama_host (str): The host and port to reach ollama from.
     """
 
     model_config = SettingsConfigDict(
@@ -25,22 +26,23 @@ class ExtractionAgentAppOptions(BaseSettings):
     extraction_topic_name: str = Field(default="", validation_alias="KAFKA_EXTRACTION_TOPIC_NAME")
     embedding_topic_name: str = Field(default="", validation_alias="KAFKA_EMBEDDING_TOPIC_NAME")
     num_consumers: int = Field(default=1, validation_alias="KAFKA_NUM_CONSUMERS")
+    ollama_host: str = Field(default="", validation_alias="OLLAMA_HOST")
 
 
-_logger: logging.Logger = logging.getLogger("ext_agent_app_options")
+_logger: logging.Logger = logging.getLogger("ext_agent_options")
 
-_ext_agent_options: ExtractionAgentAppOptions | None = None
+_ext_agent_options: ExtractionAgentOptions | None = None
 
 
-def get_ext_agent_options() -> ExtractionAgentAppOptions:
-    """Get the singleton instance of ExtractionAgentAppOptions.
+def get_ext_agent_options() -> ExtractionAgentOptions:
+    """Get the singleton instance of ExtractionAgentOptions.
 
     Returns:
-        ExtractionAgentAppOptions: The application options instance.
+        ExtractionAgentOptions: The application options instance.
     """
     global _ext_agent_options
     if _ext_agent_options is None:
-        _ext_agent_options = ExtractionAgentAppOptions()
+        _ext_agent_options = ExtractionAgentOptions()
 
         # Validate required configuration
         if not _ext_agent_options.bootstrap_servers:
@@ -53,8 +55,10 @@ def get_ext_agent_options() -> ExtractionAgentAppOptions:
             raise ValueError("KAFKA_EMBEDDING_TOPIC_NAME environment variable is required")
         if not _ext_agent_options.num_consumers or _ext_agent_options.num_consumers < 1:
             raise ValueError("KAFKA_NUM_CONSUMERS environment variable must be a positive integer")
+        if not _ext_agent_options.ollama_host:
+            raise ValueError("OLLAMA_HOST environment variable is required")
 
-        _logger.info("Extraction agent app settings loaded successfully.")
+        _logger.info("Extraction agent options loaded successfully.")
 
     return _ext_agent_options
 

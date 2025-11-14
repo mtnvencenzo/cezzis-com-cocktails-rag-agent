@@ -118,14 +118,14 @@ data-ingestion/
 │   ├── app.py                          # Main orchestrator - runs both agents
 │   ├── agents/                         # Agent implementations
 │   │   ├── extraction_agent/
-│   │   │   ├── ext_agent_app_runner.py      # Extraction agent entry point
-│   │   │   ├── ext_agent_app_options.py     # Extraction agent configuration
-│   │   │   ├── ext_agent_evt_processor.py   # Kafka message processing logic
+│   │   │   ├── ext_agent_runner.py      # Extraction agent entry point
+│   │   │   ├── ext_agent_options.py     # Extraction agent configuration
+│   │   │   ├── ext_agent_evt_receiver.py   # Kafka message processing logic
 │   │   │   └── test_*.py                    # Unit tests for extraction agent
 │   │   └── embedding_agent/
-│   │       ├── emb_agent_app_runner.py      # Embedding agent entry point
-│   │       ├── emb_agent_app_options.py     # Embedding agent configuration
-│   │       └── emb_agent_evt_processor.py   # Kafka message processing logic
+│   │       ├── emb_agent_runner.py      # Embedding agent entry point
+│   │       ├── emb_agent_options.py     # Embedding agent configuration
+│   │       └── emb_agent_evt_receiver.py   # Kafka message processing logic
 │   ├── models/
 │   │   └── cocktail_models.py              # Auto-generated from Cezzis API OpenAPI
 │   └── behaviors/
@@ -278,6 +278,12 @@ Configuration is managed via agent-specific options classes:
 
 ## 🐳 Docker Deployment
 
+### Pull models into Ollama
+```bash
+docker exec ollama ollama pull llama3.2:3b
+```
+
+
 ### Building and Running Locally
 ```bash
 # Build optimized production image
@@ -289,14 +295,13 @@ docker run -d \
   -e OTEL_EXPORTER_OTLP_ENDPOINT=http://host.docker.internal:4318 \
   -e OTEL_SERVICE_NAME=cezzis-ingestion-agentic-workflow \
   -e OTEL_SERVICE_NAMESPACE=cezzis \
-  -e OTEL_OTLP_AUTH_HEADER="Bearer your-otel-token" \
-  -e KAFKA_BOOTSTRAP_SERVERS=broker:29092 \
+  -e OTEL_OTLP_AUTH_HEADER="Bearer 00d164bd-2d3d-4d62-8280-e507637def73" \
+  -e KAFKA_BOOTSTRAP_SERVERS=host.docker.internal:39092 \
   -e KAFKA_CONSUMER_GROUP=cezzis-ingestion-agentic-workflow \
   -e KAFKA_EXTRACTION_TOPIC_NAME=cocktails-update-topic \
   -e KAFKA_EMBEDDING_TOPIC_NAME=cocktails-embeddings-topic \
   -e KAFKA_NUM_CONSUMERS=1 \
   --name cezzis-ingestion-agentic-workflow \
-  --network=kafka-stack_kafka-stack \
   cezzis-ingestion-agentic-workflow:latest
 ```
 
@@ -312,15 +317,14 @@ docker run -d \
   -e OTEL_EXPORTER_OTLP_ENDPOINT=http://host.docker.internal:4318 \
   -e OTEL_SERVICE_NAME=cezzis-ingestion-agentic-workflow \
   -e OTEL_SERVICE_NAMESPACE=cezzis \
-  -e OTEL_OTLP_AUTH_HEADER="Bearer your-otel-token" \
-  -e KAFKA_BOOTSTRAP_SERVERS=broker:29092 \
+  -e OTEL_OTLP_AUTH_HEADER="Bearer 00d164bd-2d3d-4d62-8280-e507637def73" \
+  -e KAFKA_BOOTSTRAP_SERVERS=host.docker.internal:39092 \
   -e KAFKA_CONSUMER_GROUP=cezzis-ingestion-agentic-workflow \
   -e KAFKA_EXTRACTION_TOPIC_NAME=cocktails-update-topic \
   -e KAFKA_EMBEDDING_TOPIC_NAME=cocktails-embeddings-topic \
   -e KAFKA_NUM_CONSUMERS=1 \
   --name cezzis-ingestion-agentic-workflow \
-  --network=kafka-stack_kafka-stack \
-  acrveceusgloshared001.azurecr.io/cocktailsdataingestionagenticwf:latest
+  acrveceusgloshared001.azurecr.io/cocktailsdataingestionagenticwf:a7beb559c8e87454efb04505d8ee069a713c6a62
 ```
 
 ### Docker Optimizations

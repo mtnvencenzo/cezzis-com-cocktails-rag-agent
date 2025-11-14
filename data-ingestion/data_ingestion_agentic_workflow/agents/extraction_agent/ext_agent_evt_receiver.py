@@ -3,6 +3,7 @@ import logging
 from typing import ContextManager
 
 from cezzis_kafka import IAsyncKafkaMessageProcessor, KafkaConsumerSettings, KafkaProducer, KafkaProducerSettings
+from cezzis_otel import get_propagation_headers
 from confluent_kafka import Consumer, KafkaError, Message
 from opentelemetry import trace
 from opentelemetry.propagate import extract
@@ -11,10 +12,11 @@ from pydantic import ValidationError
 
 from data_ingestion_agentic_workflow.models.cocktail_models import CocktailModel
 
-from .ext_agent_app_options import get_ext_agent_options
+from .ext_agent_options import get_ext_agent_options
+from .llm_processors import ExtractionDataMarkdownConverter
 
 
-class CocktailsExtractionProcessor(IAsyncKafkaMessageProcessor):
+class CocktailsExtractionEventReceiver(IAsyncKafkaMessageProcessor):
     """Concrete implementation of IAsyncKafkaMessageProcessor for processing cocktail extraction messages from Kafka.
 
     Attributes:
@@ -49,7 +51,7 @@ class CocktailsExtractionProcessor(IAsyncKafkaMessageProcessor):
     """
 
     def __init__(self, kafka_consumer_settings: KafkaConsumerSettings) -> None:
-        """Initialize the CocktailsExtractionProcessor
+        """Initialize the CocktailsExtractionEventReceiver
         Args:
             kafka_consumer_settings (KafkaConsumerSettings): The Kafka consumer settings.
             kafka_producer_settings (KafkaProducerSettings): The Kafka producer settings.
@@ -71,15 +73,15 @@ class CocktailsExtractionProcessor(IAsyncKafkaMessageProcessor):
 
     @staticmethod
     def CreateNew(kafka_settings: KafkaConsumerSettings) -> IAsyncKafkaMessageProcessor:
-        """Factory method to create a new instance of CocktailsExtractionProcessor.
+        """Factory method to create a new instance of CocktailsExtractionEventReceiver.
 
         Args:
             kafka_settings (KafkaConsumerSettings): The Kafka consumer settings.
 
         Returns:
-            IAsyncKafkaMessageProcessor: A new instance of CocktailsExtractionProcessor.
+            IAsyncKafkaMessageProcessor: A new instance of CocktailsExtractionEventReceiver.
         """
-        return CocktailsExtractionProcessor(kafka_consumer_settings=kafka_settings)
+        return CocktailsExtractionEventReceiver(kafka_consumer_settings=kafka_settings)
 
     def kafka_settings(self) -> KafkaConsumerSettings:
         """Get the Kafka consumer settings.
@@ -159,7 +161,7 @@ class CocktailsExtractionProcessor(IAsyncKafkaMessageProcessor):
                         # Process the individual cocktail message
                         # ----------------------------------------
                         try:
-                            self._process_message(model=cocktail_model)
+                            await self._process_message(model=cocktail_model)
                         except Exception as e:
                             self._logger.error(
                                 "Error processing cocktail extraction message item",
@@ -254,43 +256,6 @@ class CocktailsExtractionProcessor(IAsyncKafkaMessageProcessor):
             attributes=span_attributes,
         )
 
-    def _process_message(self, model: CocktailModel) -> None:
-        self._logger.info(
-            "Processing cocktail extraction message item",
-            extra={
-                "cocktail.id": model.id,
-            },
-        )
-
-        # Get current trace context to propagate to the next consumer
-        from opentelemetry.propagate import inject
-
-        # Create headers dict for trace propagation
-        headers = {}
-        inject(headers)
-
-        # Convert string values to bytes for Kafka headers
-        kafka_headers = {
-            key: value.encode("utf-8") if isinstance(value, str) else value for key, value in headers.items()
-        }
-
-        self._logger.info(
-            "Sending cocktail extraction result message to embedding topic",
-            extra={
-                "messaging.kafka.bootstrap_servers": self._kafka_consumer_settings.bootstrap_servers,
-                "messaging.kafka.topic_name": self._options.embedding_topic_name,
-                "cocktail.id": model.id,
-            },
-        )
-
-        self.producer.send_and_wait(
-            topic=self._options.embedding_topic_name,
-            key=model.id,
-            message=model.model_dump_json().encode("utf-8"),
-            headers=kafka_headers,  # Include trace context headers
-            timeout=30.0,
-        )
-
     def _on_delivered_to_embedding_topic(self, err: KafkaError | None, msg: Message) -> None:
         """Callback function to handle message delivery reports for the embedding topic.
 
@@ -306,3 +271,34 @@ class CocktailsExtractionProcessor(IAsyncKafkaMessageProcessor):
             self._logger.error(f"Message delivery failed: {err}")
         else:
             self._logger.info(f"Message delivered to {msg.topic()} [{msg.partition()}] at offset {msg.offset()}")
+
+    async def _process_message(self, model: CocktailModel) -> None:
+        self._logger.info(
+            "Processing cocktail extraction message item",
+            extra={
+                "cocktail.id": model.id,
+            },
+        )
+
+        markdown_llm_processor = ExtractionDataMarkdownConverter(self._options.ollama_host)
+
+        md_content = model.content or ""  # .encode('raw_unicode_escape').decode('unicode_escape')
+
+        desc = await markdown_llm_processor.convert_markdown(md_content)
+
+        self._logger.info(
+            "Sending cocktail extraction result message to embedding topic",
+            extra={
+                "messaging.kafka.bootstrap_servers": self._kafka_consumer_settings.bootstrap_servers,
+                "messaging.kafka.topic_name": self._options.embedding_topic_name,
+                "cocktail.id": model.id,
+            },
+        )
+
+        self.producer.send_and_wait(
+            topic=self._options.embedding_topic_name,
+            key=model.id,
+            message=desc or "".encode("utf-8"),
+            headers=get_propagation_headers(),  # Include trace context headers
+            timeout=30.0,
+        )
