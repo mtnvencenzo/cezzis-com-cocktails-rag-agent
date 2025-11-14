@@ -3,8 +3,8 @@ from typing import Any, Coroutine
 
 from cezzis_kafka import spawn_consumers_async
 
-from .ext_agent_app_options import get_ext_agent_options
-from .ext_agent_evt_processor import CocktailsExtractionProcessor
+from .ext_agent_evt_receiver import CocktailsExtractionEventReceiver
+from .ext_agent_options import get_ext_agent_options
 
 logger: logging.Logger = logging.getLogger("ext_agent_app_runner")
 
@@ -20,7 +20,7 @@ def run_extraction_agent() -> Coroutine[Any, Any, None]:
     options = get_ext_agent_options()
 
     return spawn_consumers_async(
-        factory_type=CocktailsExtractionProcessor,
+        factory_type=CocktailsExtractionEventReceiver,
         num_consumers=options.num_consumers,
         bootstrap_servers=options.bootstrap_servers,
         consumer_group=options.consumer_group,
