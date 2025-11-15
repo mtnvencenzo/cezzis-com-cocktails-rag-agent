@@ -4,8 +4,7 @@ import os
 import httpx
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_ollama import OllamaLLM
-from langfuse import Langfuse, get_client, observe
-from langfuse.langchain import CallbackHandler
+from langfuse import Langfuse, observe
 
 from .llm_markdown_converter_prompts import md_converter_human_prompt, md_converter_sys_prompt
 
@@ -20,7 +19,7 @@ class LLMMarkdownConverter:
         os.environ["LANGFUSE_PUBLIC_KEY"] = langfuse_public_key
         os.environ["LANGFUSE_SECRET_KEY"] = langfuse_secret_key
 
-        #_ = get_client()
+        # _ = get_client()
         _ = Langfuse(
             secret_key=langfuse_secret_key,
             public_key=langfuse_public_key,
@@ -46,10 +45,8 @@ class LLMMarkdownConverter:
         chain = prompt | self.llm
 
         try:
-            #result = await chain.ainvoke({"markdown": markdown_text}, config={"callbacks": [self._langfuse_handler]})
-            result = await chain.ainvoke(
-                {"markdown": markdown_text},
-                timeout=self._llm_timeout)
+            # result = await chain.ainvoke({"markdown": markdown_text}, config={"callbacks": [self._langfuse_handler]})
+            result = await chain.ainvoke({"markdown": markdown_text}, timeout=self._llm_timeout)
 
             return result
 
