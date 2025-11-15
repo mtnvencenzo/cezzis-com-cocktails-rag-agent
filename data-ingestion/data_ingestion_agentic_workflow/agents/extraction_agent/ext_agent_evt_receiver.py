@@ -10,10 +10,9 @@ from opentelemetry.propagate import extract
 from opentelemetry.trace import Span
 from pydantic import ValidationError
 
+from data_ingestion_agentic_workflow.agents.extraction_agent.ext_agent_options import get_ext_agent_options
 from data_ingestion_agentic_workflow.llm.markdown_converter.llm_markdown_converter import LLMMarkdownConverter
 from data_ingestion_agentic_workflow.models.cocktail_models import CocktailModel
-
-from .ext_agent_options import get_ext_agent_options
 
 
 class CocktailsExtractionEventReceiver(IAsyncKafkaMessageProcessor):
