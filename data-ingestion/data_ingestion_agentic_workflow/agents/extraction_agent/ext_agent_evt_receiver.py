@@ -71,6 +71,13 @@ class CocktailsExtractionEventReceiver(IAsyncKafkaMessageProcessor):
             )
         )
 
+        self._markdown_converter = LLMMarkdownConverter(
+            ollama_host=self._options.ollama_host,
+            langfuse_host=self._options.langfuse_host,
+            langfuse_public_key=self._options.langfuse_public_key,
+            langfuse_secret_key=self._options.langfuse_secret_key,
+        )
+
     @staticmethod
     def CreateNew(kafka_settings: KafkaConsumerSettings) -> IAsyncKafkaMessageProcessor:
         """Factory method to create a new instance of CocktailsExtractionEventReceiver.
@@ -280,16 +287,9 @@ class CocktailsExtractionEventReceiver(IAsyncKafkaMessageProcessor):
             },
         )
 
-        markdown_llm_processor = LLMMarkdownConverter(
-            ollama_host=self._options.ollama_host,
-            langfuse_host=self._options.langfuse_host,
-            langfuse_public_key=self._options.langfuse_public_key,
-            langfuse_secret_key=self._options.langfuse_secret_key,
-        )
-
         md_content = model.content or ""
 
-        desc = await markdown_llm_processor.convert_markdown(md_content)
+        desc = await self._markdown_converter.convert_markdown(md_content)
 
         self._logger.info(
             "Sending cocktail extraction result message to embedding topic",
