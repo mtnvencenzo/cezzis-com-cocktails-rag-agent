@@ -20,13 +20,13 @@ class LLMMarkdownConverter:
         os.environ["LANGFUSE_PUBLIC_KEY"] = langfuse_public_key
         os.environ["LANGFUSE_SECRET_KEY"] = langfuse_secret_key
 
-        langfuse = get_client()
+        _ = get_client()
 
         self._langfuse_handler = CallbackHandler(
-            #host=langfuse_host,
+            # host=langfuse_host,
             public_key=langfuse_public_key,
             update_trace=True,
-            #secret_key=langfuse_secret_key,
+            # secret_key=langfuse_secret_key,
         )
 
     async def convert_markdown(self, markdown_text: str) -> str:
