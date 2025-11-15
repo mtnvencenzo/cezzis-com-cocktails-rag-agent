@@ -1,3 +1,4 @@
+import asyncio
 import logging
 from collections.abc import Coroutine
 from typing import Any
@@ -19,6 +20,10 @@ def run_embedding_agent() -> Coroutine[Any, Any, None]:
 
     logger.info("Starting Cocktail Embedding Agent")
     options = get_emb_agent_options()
+
+    if not options.enabled:
+        logger.info("Embedding agent is disabled. Exiting.")
+        return asyncio.sleep(0)  # Return a no-op coroutine
 
     return spawn_consumers_async(
         factory_type=CocktailsEmbeddingProcessor,

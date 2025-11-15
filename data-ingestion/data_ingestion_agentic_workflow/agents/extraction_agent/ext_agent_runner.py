@@ -1,3 +1,4 @@
+import asyncio
 import logging
 from typing import Any, Coroutine
 
@@ -18,6 +19,10 @@ def run_extraction_agent() -> Coroutine[Any, Any, None]:
 
     logger.info("Starting Cocktail Extraction Agent")
     options = get_ext_agent_options()
+
+    if not options.enabled:
+        logger.info("Extraction agent is disabled. Exiting.")
+        return asyncio.sleep(0)  # Return a no-op coroutine
 
     return spawn_consumers_async(
         factory_type=CocktailsExtractionEventReceiver,
