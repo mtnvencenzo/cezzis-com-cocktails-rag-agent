@@ -4,8 +4,8 @@ from typing import Any, Coroutine
 
 from cezzis_kafka import spawn_consumers_async
 
-from .ext_agent_evt_receiver import CocktailsExtractionEventReceiver
-from .ext_agent_options import get_ext_agent_options
+from data_ingestion_agentic_workflow.agents.extraction_agent.ext_agent_evt_receiver import CocktailsExtractionEventReceiver
+from data_ingestion_agentic_workflow.agents.extraction_agent.ext_agent_options import get_ext_agent_options
 
 logger: logging.Logger = logging.getLogger("ext_agent_app_runner")
 

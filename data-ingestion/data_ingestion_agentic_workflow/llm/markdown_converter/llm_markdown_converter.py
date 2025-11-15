@@ -6,7 +6,7 @@ from langchain_core.prompts import ChatPromptTemplate
 from langchain_ollama import OllamaLLM
 from langfuse import Langfuse, observe
 
-from .llm_markdown_converter_prompts import md_converter_human_prompt, md_converter_sys_prompt
+from data_ingestion_agentic_workflow.llm.markdown_converter.llm_markdown_converter_prompts import md_converter_human_prompt, md_converter_sys_prompt
 
 
 class LLMMarkdownConverter:

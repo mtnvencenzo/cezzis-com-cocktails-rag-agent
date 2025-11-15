@@ -5,8 +5,8 @@ from typing import Any
 
 from cezzis_kafka import spawn_consumers_async
 
-from .emb_agent_app_options import get_emb_agent_options
-from .emb_agent_evt_processor import CocktailsEmbeddingProcessor
+from data_ingestion_agentic_workflow.agents.embedding_agent.emb_agent_app_options import get_emb_agent_options
+from data_ingestion_agentic_workflow.agents.embedding_agent.emb_agent_evt_processor import CocktailsEmbeddingProcessor
 
 logger: logging.Logger = logging.getLogger("emb_agent_runner")
 

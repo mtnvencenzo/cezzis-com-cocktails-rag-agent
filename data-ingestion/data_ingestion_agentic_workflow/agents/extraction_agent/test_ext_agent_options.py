@@ -5,7 +5,7 @@ from typing import Any, Dict, Generator
 import pytest
 from pytest_mock import MockerFixture
 
-from .test_fixtures import (  # type: ignore[import]
+from data_ingestion_agentic_workflow.agents.extraction_agent.test_fixtures import (  # type: ignore[import]
     clear_settings_cache,
     mock_env_vars,
 )
