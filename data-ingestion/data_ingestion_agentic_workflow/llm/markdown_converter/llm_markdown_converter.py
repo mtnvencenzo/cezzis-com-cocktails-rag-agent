@@ -23,7 +23,7 @@ class LLMMarkdownConverter:
         os.environ["LANGFUSE_PUBLIC_KEY"] = langfuse_public_key
         os.environ["LANGFUSE_SECRET_KEY"] = langfuse_secret_key
 
-        # self._langfuse_handler = CallbackHandler()
+        # self._langfuse_handler = LangfuseCallbackHandler()
 
     async def convert_markdown(self, markdown_text: str) -> str:
         prompt = ChatPromptTemplate.from_messages(
