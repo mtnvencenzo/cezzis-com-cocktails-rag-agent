@@ -1,9 +1,11 @@
 import asyncio
+import os
 
 import httpx
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_ollama import OllamaLLM
-from langfuse.callback import CallbackHandler
+from langfuse import get_client
+from langfuse.langchain import CallbackHandler
 
 from .llm_markdown_converter_prompts import md_converter_human_prompt, md_converter_sys_prompt
 
@@ -12,10 +14,19 @@ class LLMMarkdownConverter:
     def __init__(self, ollama_host: str, langfuse_host: str, langfuse_public_key: str, langfuse_secret_key: str):
         self.llm = OllamaLLM(model="llama3.2:3b", base_url=ollama_host, temperature=0.1, num_predict=2024, verbose=True)
         self._llm_timeout = 90.0
+
+        os.environ["LANGFUSE_BASE_URL"] = langfuse_host
+        os.environ["LANGFUSE_HOST"] = langfuse_host
+        os.environ["LANGFUSE_PUBLIC_KEY"] = langfuse_public_key
+        os.environ["LANGFUSE_SECRET_KEY"] = langfuse_secret_key
+
+        langfuse = get_client()
+
         self._langfuse_handler = CallbackHandler(
-            host=langfuse_host,
+            #host=langfuse_host,
             public_key=langfuse_public_key,
-            secret_key=langfuse_secret_key,
+            update_trace=True,
+            #secret_key=langfuse_secret_key,
         )
 
     async def convert_markdown(self, markdown_text: str) -> str:
