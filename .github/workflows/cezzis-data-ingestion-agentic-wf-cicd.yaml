@@ -48,6 +48,7 @@ jobs:
     with:
       python_version: '3.12'
       working_directory: './data-ingestion'
+      cache_dependencies: false
       ruff_config: '.ruff.toml'
       pytest_args: '-v'
       coverage_source: 'data_ingestion_agentic_workflow'
