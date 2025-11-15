@@ -2,10 +2,11 @@ import asyncio
 import os
 
 import httpx
+from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_ollama import OllamaLLM
-from langfuse import Langfuse, observe
 
+# from langfuse.langchain import CallbackHandler
 from data_ingestion_agentic_workflow.llm.markdown_converter.llm_markdown_converter_prompts import (
     md_converter_human_prompt,
     md_converter_sys_prompt,
@@ -22,22 +23,8 @@ class LLMMarkdownConverter:
         os.environ["LANGFUSE_PUBLIC_KEY"] = langfuse_public_key
         os.environ["LANGFUSE_SECRET_KEY"] = langfuse_secret_key
 
-        # _ = get_client()
-        _ = Langfuse(
-            secret_key=langfuse_secret_key,
-            public_key=langfuse_public_key,
-            host=langfuse_host,
-            debug=True,
-        )
+        # self._langfuse_handler = CallbackHandler()
 
-        # self._langfuse_handler = CallbackHandler(
-        #     # host=langfuse_host,
-        #     public_key=langfuse_public_key,
-        #     update_trace=True,
-        #     # secret_key=langfuse_secret_key,
-        # )
-
-    @observe
     async def convert_markdown(self, markdown_text: str) -> str:
         prompt = ChatPromptTemplate.from_messages(
             [
@@ -45,10 +32,9 @@ class LLMMarkdownConverter:
                 ("human", md_converter_human_prompt),
             ]
         )
-        chain = prompt | self.llm
+        chain = prompt | self.llm | StrOutputParser()
 
         try:
-            # result = await chain.ainvoke({"markdown": markdown_text}, config={"callbacks": [self._langfuse_handler]})
             result = await chain.ainvoke({"markdown": markdown_text}, timeout=self._llm_timeout)
 
             return result
