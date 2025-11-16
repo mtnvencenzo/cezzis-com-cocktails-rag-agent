@@ -272,6 +272,44 @@ class CocktailsExtractionEventReceiver(IAsyncKafkaMessageProcessor):
             attributes=span_attributes,
         )
 
+    def _create_cocktail_processing_read_span(
+        self, tracer: trace.Tracer, span_name: str, msg: Message, cocktail_model: CocktailModel
+    ) -> ContextManager[Span]:
+        """Create a child span for an individual cocktail model processing.
+
+        Args:
+            tracer (trace.Tracer): The OpenTelemetry tracer.
+            span_name (str): The name of the span.
+            cocktail_model (CocktailModel): The cocktail model object.
+
+        Returns:
+            ContextManager[Span]: A context manager that yields the created child span.
+        """
+        # Extract trace context from Kafka message headers for distributed tracing
+        carrier: dict[str, str] = {}
+        headers = msg.headers()
+        if headers is not None:
+            for key, value in headers:
+                if isinstance(value, bytes):
+                    try:
+                        carrier[key] = value.decode("utf-8")
+                    except UnicodeDecodeError:
+                        self._logger.warning(f"Failed to decode header '{key}' as UTF-8, skipping")
+
+        # Extract parent context and create a span as a child of the API trace
+        parent_context = extract(carrier)
+
+        # Add Kafka-specific attributes to the span using OpenTelemetry semantic conventions
+        span_attributes: dict[str, str | int] = {
+            "cocktail_id": cocktail_model.id,
+        }
+
+        return tracer.start_as_current_span(
+            span_name,
+            context=parent_context,
+            attributes=span_attributes,
+        )
+
     def _on_delivered_to_embedding_topic(self, err: KafkaError | None, msg: Message) -> None:
         """Callback function to handle message delivery reports for the embedding topic.
 
@@ -289,30 +327,33 @@ class CocktailsExtractionEventReceiver(IAsyncKafkaMessageProcessor):
             self._logger.info(f"Message delivered to {msg.topic()} [{msg.partition()}] at offset {msg.offset()}")
 
     async def _process_message(self, model: CocktailModel, msg: Message) -> None:
-        self._logger.info(
-            "Processing cocktail extraction message item",
-            extra={
-                "cocktail.id": model.id,
-            },
-        )
+        with self._create_cocktail_processing_read_span(
+            self._tracer, "cocktail-extraction-item-processing", msg=msg, cocktail_model=model
+        ):
+            self._logger.info(
+                "Processing cocktail extraction message item",
+                extra={
+                    "cocktail.id": model.id,
+                },
+            )
 
-        md_content = model.content or ""
+            md_content = model.content or ""
 
-        desc = await self._markdown_converter.convert_markdown(md_content)
+            desc = await self._markdown_converter.convert_markdown(md_content)
 
-        self._logger.info(
-            "Sending cocktail extraction result message to embedding topic",
-            extra={
-                "messaging.kafka.bootstrap_servers": self._kafka_consumer_settings.bootstrap_servers,
-                "messaging.kafka.topic_name": self._options.embedding_topic_name,
-                "cocktail.id": model.id,
-            },
-        )
+            self._logger.info(
+                "Sending cocktail extraction result message to embedding topic",
+                extra={
+                    "messaging.kafka.bootstrap_servers": self._kafka_consumer_settings.bootstrap_servers,
+                    "messaging.kafka.topic_name": self._options.embedding_topic_name,
+                    "cocktail.id": model.id,
+                },
+            )
 
-        self.producer.send_and_wait(
-            topic=self._options.embedding_topic_name,
-            key=model.id,
-            message=desc or "".encode("utf-8"),
-            headers=get_propagation_headers(),  # Include trace context headers
-            timeout=30.0,
-        )
+            self.producer.send_and_wait(
+                topic=self._options.embedding_topic_name,
+                key=model.id,
+                message=desc or "".encode("utf-8"),
+                headers=get_propagation_headers(),  # Include trace context headers
+                timeout=30.0,
+            )
