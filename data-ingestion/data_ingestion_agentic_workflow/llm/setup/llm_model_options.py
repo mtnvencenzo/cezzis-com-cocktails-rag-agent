@@ -8,6 +8,7 @@ class LLMModelOptions:
     """
     Options for configuring LLM model run-time behavior and settings.
     """
+
     model: str
     """Model name to use."""
 
