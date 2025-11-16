@@ -7,6 +7,7 @@ from cezzis_kafka import spawn_consumers_async
 
 from data_ingestion_agentic_workflow.agents.embedding_agent.emb_agent_app_options import get_emb_agent_options
 from data_ingestion_agentic_workflow.agents.embedding_agent.emb_agent_evt_processor import CocktailsEmbeddingProcessor
+from data_ingestion_agentic_workflow.infra.kafka_options import KafkaOptions, get_kafka_options
 
 logger: logging.Logger = logging.getLogger("emb_agent_runner")
 
@@ -20,6 +21,7 @@ def run_embedding_agent() -> Coroutine[Any, Any, None]:
 
     logger.info("Starting Cocktail Embedding Agent")
     options = get_emb_agent_options()
+    kafka_options: KafkaOptions = get_kafka_options()
 
     if not options.enabled:
         logger.info("Embedding agent is disabled. Exiting.")
@@ -27,8 +29,8 @@ def run_embedding_agent() -> Coroutine[Any, Any, None]:
 
     return spawn_consumers_async(
         factory_type=CocktailsEmbeddingProcessor,
+        bootstrap_servers=kafka_options.bootstrap_servers,
+        consumer_group=kafka_options.consumer_group,
         num_consumers=options.num_consumers,
-        bootstrap_servers=options.bootstrap_servers,
-        consumer_group=options.consumer_group,
         topic_name=options.embedding_topic_name,
     )

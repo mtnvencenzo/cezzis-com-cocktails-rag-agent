@@ -11,7 +11,10 @@ from opentelemetry.trace import Span
 from pydantic import ValidationError
 
 from data_ingestion_agentic_workflow.agents.extraction_agent.ext_agent_options import get_ext_agent_options
+from data_ingestion_agentic_workflow.infra.kafka_options import KafkaOptions, get_kafka_options
 from data_ingestion_agentic_workflow.llm.markdown_converter.llm_markdown_converter import LLMMarkdownConverter
+from data_ingestion_agentic_workflow.llm.setup.llm_model_options import LLMModelOptions
+from data_ingestion_agentic_workflow.llm.setup.llm_options import get_llm_options
 from data_ingestion_agentic_workflow.models.cocktail_models import CocktailModel
 
 
@@ -64,17 +67,24 @@ class CocktailsExtractionEventReceiver(IAsyncKafkaMessageProcessor):
         self._kafka_consumer_settings = kafka_consumer_settings
         self._options = get_ext_agent_options()
 
+        kafka_options: KafkaOptions = get_kafka_options()
+
         self.producer = KafkaProducer(
             settings=KafkaProducerSettings(
-                bootstrap_servers=self._options.bootstrap_servers, on_delivery=self._on_delivered_to_embedding_topic
+                bootstrap_servers=kafka_options.bootstrap_servers, on_delivery=self._on_delivered_to_embedding_topic
             )
         )
 
         self._markdown_converter = LLMMarkdownConverter(
-            ollama_host=self._options.ollama_host,
-            langfuse_host=self._options.langfuse_host,
-            langfuse_public_key=self._options.langfuse_public_key,
-            langfuse_secret_key=self._options.langfuse_secret_key,
+            llm_options=get_llm_options(),
+            model_options=LLMModelOptions(
+                model="llama3.2:3b",
+                temperature=0.0,
+                num_predict=2024,
+                verbose=True,
+                timeout_seconds=180,
+                reasoning=False,
+            ),
         )
 
     @staticmethod
@@ -119,6 +129,10 @@ class CocktailsExtractionEventReceiver(IAsyncKafkaMessageProcessor):
                 if value is not None:
                     decoded_value = value.decode("utf-8")
                     json_array = json.loads(decoded_value)
+
+                    span = trace.get_current_span()
+                    span.set_attribute("cocktail_item_count", len(json_array))
+
                     self._logger.info(
                         "Received cocktail extraction message",
                         extra={
@@ -167,7 +181,7 @@ class CocktailsExtractionEventReceiver(IAsyncKafkaMessageProcessor):
                         # Process the individual cocktail message
                         # ----------------------------------------
                         try:
-                            await self._process_message(model=cocktail_model)
+                            await self._process_message(model=cocktail_model, msg=msg)
                         except Exception as e:
                             self._logger.error(
                                 "Error processing cocktail extraction message item",
@@ -262,6 +276,30 @@ class CocktailsExtractionEventReceiver(IAsyncKafkaMessageProcessor):
             attributes=span_attributes,
         )
 
+    def _create_cocktail_processing_read_span(
+        self, tracer: trace.Tracer, span_name: str, cocktail_model: CocktailModel
+    ) -> ContextManager[Span]:
+        """Create a child span for an individual cocktail model processing.
+
+        Args:
+            tracer (trace.Tracer): The OpenTelemetry tracer.
+            span_name (str): The name of the span.
+            cocktail_model (CocktailModel): The cocktail model object.
+
+        Returns:
+            ContextManager[Span]: A context manager that yields the created child span.
+        """
+        # Add cocktail-specific attributes to the span
+        span_attributes: dict[str, str | int] = {
+            "cocktail_id": cocktail_model.id,
+        }
+
+        # Create a child span of the current active span (no context extraction needed)
+        return tracer.start_as_current_span(
+            span_name,
+            attributes=span_attributes,
+        )
+
     def _on_delivered_to_embedding_topic(self, err: KafkaError | None, msg: Message) -> None:
         """Callback function to handle message delivery reports for the embedding topic.
 
@@ -278,31 +316,34 @@ class CocktailsExtractionEventReceiver(IAsyncKafkaMessageProcessor):
         else:
             self._logger.info(f"Message delivered to {msg.topic()} [{msg.partition()}] at offset {msg.offset()}")
 
-    async def _process_message(self, model: CocktailModel) -> None:
-        self._logger.info(
-            "Processing cocktail extraction message item",
-            extra={
-                "cocktail.id": model.id,
-            },
-        )
+    async def _process_message(self, model: CocktailModel, msg: Message) -> None:
+        with self._create_cocktail_processing_read_span(
+            self._tracer, "cocktail-extraction-item-processing", cocktail_model=model
+        ):
+            self._logger.info(
+                "Processing cocktail extraction message item",
+                extra={
+                    "cocktail.id": model.id,
+                },
+            )
 
-        md_content = model.content or ""
+            md_content = model.content or ""
 
-        desc = await self._markdown_converter.convert_markdown(md_content)
+            desc = await self._markdown_converter.convert_markdown(md_content)
 
-        self._logger.info(
-            "Sending cocktail extraction result message to embedding topic",
-            extra={
-                "messaging.kafka.bootstrap_servers": self._kafka_consumer_settings.bootstrap_servers,
-                "messaging.kafka.topic_name": self._options.embedding_topic_name,
-                "cocktail.id": model.id,
-            },
-        )
+            self._logger.info(
+                "Sending cocktail extraction result message to embedding topic",
+                extra={
+                    "messaging.kafka.bootstrap_servers": self._kafka_consumer_settings.bootstrap_servers,
+                    "messaging.kafka.topic_name": self._options.embedding_topic_name,
+                    "cocktail.id": model.id,
+                },
+            )
 
-        self.producer.send_and_wait(
-            topic=self._options.embedding_topic_name,
-            key=model.id,
-            message=desc or "".encode("utf-8"),
-            headers=get_propagation_headers(),  # Include trace context headers
-            timeout=30.0,
-        )
+            self.producer.send_and_wait(
+                topic=self._options.embedding_topic_name,
+                key=model.id,
+                message=desc or "".encode("utf-8"),
+                headers=get_propagation_headers(),  # Include trace context headers
+                timeout=30.0,
+            )
