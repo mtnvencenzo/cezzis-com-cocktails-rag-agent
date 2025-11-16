@@ -5,8 +5,8 @@ import httpx
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_ollama import OllamaLLM
+from langfuse.langchain import CallbackHandler
 
-# from langfuse.langchain import CallbackHandler
 from data_ingestion_agentic_workflow.llm.markdown_converter.llm_markdown_converter_prompts import (
     md_converter_human_prompt,
     md_converter_sys_prompt,
@@ -23,7 +23,7 @@ class LLMMarkdownConverter:
         os.environ["LANGFUSE_PUBLIC_KEY"] = langfuse_public_key
         os.environ["LANGFUSE_SECRET_KEY"] = langfuse_secret_key
 
-        # self._langfuse_handler = LangfuseCallbackHandler()
+        self._langfuse_handler = CallbackHandler()
 
     async def convert_markdown(self, markdown_text: str) -> str:
         prompt = ChatPromptTemplate.from_messages(
