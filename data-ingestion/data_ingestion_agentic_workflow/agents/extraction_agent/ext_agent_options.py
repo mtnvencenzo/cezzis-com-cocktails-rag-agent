@@ -22,7 +22,7 @@ class ExtractionAgentOptions(BaseSettings):
     enabled: bool = Field(default=True, validation_alias="EXTRACTION_AGENT_ENABLED")
     extraction_topic_name: str = Field(default="", validation_alias="EXTRACTION_AGENT_KAFKA_TOPIC_NAME")
     num_consumers: int = Field(default=1, validation_alias="EXTRACTION_AGENT_KAFKA_NUM_CONSUMERS")
-    embedding_topic_name: str = Field(default="", validation_alias="EMBEDDING_AGENT_KAFKA_TOPIC_NAME")
+    chunking_topic_name: str = Field(default="", validation_alias="CHUNKING_AGENT_KAFKA_TOPIC_NAME")
 
 
 _logger: logging.Logger = logging.getLogger("ext_agent_options")
@@ -43,8 +43,8 @@ def get_ext_agent_options() -> ExtractionAgentOptions:
         # Validate required configuration
         if not _ext_agent_options.extraction_topic_name:
             raise ValueError("EXTRACTION_AGENT_KAFKA_TOPIC_NAME environment variable is required")
-        if not _ext_agent_options.embedding_topic_name:
-            raise ValueError("EMBEDDING_AGENT_KAFKA_TOPIC_NAME environment variable is required")
+        if not _ext_agent_options.chunking_topic_name:
+            raise ValueError("CHUNKING_AGENT_KAFKA_TOPIC_NAME environment variable is required")
         if not _ext_agent_options.num_consumers or _ext_agent_options.num_consumers < 1:
             raise ValueError("EXTRACTION_AGENT_KAFKA_NUM_CONSUMERS environment variable must be a positive integer")
         _logger.info("Extraction agent options loaded successfully.")

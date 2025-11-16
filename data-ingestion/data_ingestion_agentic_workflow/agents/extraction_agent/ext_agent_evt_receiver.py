@@ -13,6 +13,7 @@ from data_ingestion_agentic_workflow.infra.kafka_options import KafkaOptions, ge
 from data_ingestion_agentic_workflow.llm.markdown_converter.llm_markdown_converter import LLMMarkdownConverter
 from data_ingestion_agentic_workflow.llm.setup.llm_model_options import LLMModelOptions
 from data_ingestion_agentic_workflow.llm.setup.llm_options import get_llm_options
+from data_ingestion_agentic_workflow.models.cocktail_extraction_model import CocktailExtractionModel
 from data_ingestion_agentic_workflow.models.cocktail_models import CocktailModel
 
 
@@ -146,7 +147,7 @@ class CocktailsExtractionEventReceiver(BaseAgentEventReceiver):
                         # Process the individual cocktail message
                         # ----------------------------------------
                         try:
-                            await self._process_message(model=cocktail_model, msg=msg)
+                            await self._process_message(model=cocktail_model)
                         except Exception as e:
                             self._logger.error(
                                 "Error processing cocktail extraction message item",
@@ -186,7 +187,7 @@ class CocktailsExtractionEventReceiver(BaseAgentEventReceiver):
                     },
                 )
 
-    async def _process_message(self, model: CocktailModel, msg: Message) -> None:
+    async def _process_message(self, model: CocktailModel) -> None:
         with super().create_processing_read_span(
             self._tracer, "cocktail-extraction-item-processing", span_attributes={"cocktail_id": model.id}
         ):
@@ -197,23 +198,26 @@ class CocktailsExtractionEventReceiver(BaseAgentEventReceiver):
                 },
             )
 
-            md_content = model.content or ""
-
-            desc = await self._markdown_converter.convert_markdown(md_content)
+            extraction_text = await self._markdown_converter.convert_markdown(model.content or "")
 
             self._logger.info(
-                "Sending cocktail extraction result message to embedding topic",
+                "Sending cocktail extraction model to chunking topic",
                 extra={
                     "messaging.kafka.bootstrap_servers": self._kafka_consumer_settings.bootstrap_servers,
-                    "messaging.kafka.topic_name": self._options.embedding_topic_name,
+                    "messaging.kafka.topic_name": self._options.chunking_topic_name,
                     "cocktail.id": model.id,
                 },
             )
 
+            extraction_model = CocktailExtractionModel(
+                cocktail_model=model,
+                extraction_text=(extraction_text or ""),
+            )
+
             self.producer.send_and_wait(
-                topic=self._options.embedding_topic_name,
+                topic=self._options.chunking_topic_name,
                 key=model.id,
-                message=desc or "".encode("utf-8"),
-                headers=get_propagation_headers(),  # Include trace context headers
+                message=json.dumps(extraction_model).encode("utf-8"),
+                headers=get_propagation_headers(),
                 timeout=30.0,
             )

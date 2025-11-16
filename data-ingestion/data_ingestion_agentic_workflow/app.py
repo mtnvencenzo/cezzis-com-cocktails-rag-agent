@@ -12,7 +12,7 @@ from opentelemetry.instrumentation.confluent_kafka import (  # type: ignore
 )
 
 # Application specific imports
-from data_ingestion_agentic_workflow.agents import run_embedding_agent, run_extraction_agent
+from data_ingestion_agentic_workflow.agents import run_chunking_agent, run_embedding_agent, run_extraction_agent
 from data_ingestion_agentic_workflow.behaviors.otel import get_otel_options
 
 logger: logging.Logger = logging.getLogger(__name__)
@@ -46,6 +46,7 @@ async def main() -> None:
     try:
         await asyncio.gather(
             run_extraction_agent(),
+            run_chunking_agent(),
             run_embedding_agent(),
         )
     except asyncio.CancelledError:
