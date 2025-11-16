@@ -1009,14 +1009,14 @@ ollama = ">=0.6.0,<1.0.0"
 
 [[package]]
 name = "langfuse"
-version = "3.8.0"
+version = "3.10.0"
 description = "A client library for accessing langfuse"
 optional = false
 python-versions = "<4.0,>=3.10"
 groups = ["main"]
 files = [
-    {file = "langfuse-3.8.0-py3-none-any.whl", hash = "sha256:9b7e786e7ae8ad895af479b8ad5d094e600f2c7ec1b3dc8bbcd225b1bc7e320a"},
-    {file = "langfuse-3.8.0.tar.gz", hash = "sha256:f10ecd76a02d89368b41568e386f2bde8744729209a1ca0838b1209703eb7455"},
+    {file = "langfuse-3.10.0-py3-none-any.whl", hash = "sha256:c7c10607c6fe560990d0973566afd3c5513f7ff97cc31691af72711ad5441d8c"},
+    {file = "langfuse-3.10.0.tar.gz", hash = "sha256:7a9254103da50cabcf46a7e7ae9d2cf1f8267f09b6036abdb4a9c6f2f3d15104"},
 ]
 
 [package.dependencies]
@@ -2745,4 +2745,4 @@ cffi = ["cffi (>=1.17,<2.0) ; platform_python_implementation != \"PyPy\" and pyt
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.12,<3.15"
-content-hash = "f01b49e360aa2fa05e1786e53aee0cba8c6105238b9e968f9074362fef2cc5b9"
+content-hash = "2006e3cdc9f9d51583c2b0fa39832fe69f7db1eed15be0b766f26ee7b53ef045"

@@ -17,7 +17,7 @@ dependencies = [
     "langchain-ollama (>=1.0.0,<2.0.0)",
     "langchain (>=1.0.5,<2.0.0)",
     "httpx (>=0.28.1,<0.29.0)",
-    "langfuse (==3.8.0)",
+    "langfuse (==3.10.0)",
 ]
 
 [tool.poetry]
