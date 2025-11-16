@@ -11,6 +11,7 @@ from opentelemetry.trace import Span
 from pydantic import ValidationError
 
 from data_ingestion_agentic_workflow.agents.extraction_agent.ext_agent_options import get_ext_agent_options
+from data_ingestion_agentic_workflow.infra.kafka_options import KafkaOptions, get_kafka_options
 from data_ingestion_agentic_workflow.llm.markdown_converter.llm_markdown_converter import LLMMarkdownConverter
 from data_ingestion_agentic_workflow.llm.setup.llm_model_options import LLMModelOptions
 from data_ingestion_agentic_workflow.llm.setup.llm_options import get_llm_options
@@ -66,9 +67,11 @@ class CocktailsExtractionEventReceiver(IAsyncKafkaMessageProcessor):
         self._kafka_consumer_settings = kafka_consumer_settings
         self._options = get_ext_agent_options()
 
+        kafka_options: KafkaOptions = get_kafka_options()
+
         self.producer = KafkaProducer(
             settings=KafkaProducerSettings(
-                bootstrap_servers=self._options.bootstrap_servers, on_delivery=self._on_delivered_to_embedding_topic
+                bootstrap_servers=kafka_options.bootstrap_servers, on_delivery=self._on_delivered_to_embedding_topic
             )
         )
 
@@ -174,7 +177,7 @@ class CocktailsExtractionEventReceiver(IAsyncKafkaMessageProcessor):
                         # Process the individual cocktail message
                         # ----------------------------------------
                         try:
-                            await self._process_message(model=cocktail_model)
+                            await self._process_message(model=cocktail_model, msg=msg)
                         except Exception as e:
                             self._logger.error(
                                 "Error processing cocktail extraction message item",
@@ -285,7 +288,7 @@ class CocktailsExtractionEventReceiver(IAsyncKafkaMessageProcessor):
         else:
             self._logger.info(f"Message delivered to {msg.topic()} [{msg.partition()}] at offset {msg.offset()}")
 
-    async def _process_message(self, model: CocktailModel) -> None:
+    async def _process_message(self, model: CocktailModel, msg: Message) -> None:
         self._logger.info(
             "Processing cocktail extraction message item",
             extra={

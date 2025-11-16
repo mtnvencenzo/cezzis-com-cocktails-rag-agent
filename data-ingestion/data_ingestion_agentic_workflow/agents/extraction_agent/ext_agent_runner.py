@@ -8,6 +8,7 @@ from data_ingestion_agentic_workflow.agents.extraction_agent.ext_agent_evt_recei
     CocktailsExtractionEventReceiver,
 )
 from data_ingestion_agentic_workflow.agents.extraction_agent.ext_agent_options import get_ext_agent_options
+from data_ingestion_agentic_workflow.infra.kafka_options import KafkaOptions, get_kafka_options
 
 logger: logging.Logger = logging.getLogger("ext_agent_app_runner")
 
@@ -21,6 +22,7 @@ def run_extraction_agent() -> Coroutine[Any, Any, None]:
 
     logger.info("Starting Cocktail Extraction Agent")
     options = get_ext_agent_options()
+    kafka_options: KafkaOptions = get_kafka_options()
 
     if not options.enabled:
         logger.info("Extraction agent is disabled. Exiting.")
@@ -28,8 +30,8 @@ def run_extraction_agent() -> Coroutine[Any, Any, None]:
 
     return spawn_consumers_async(
         factory_type=CocktailsExtractionEventReceiver,
+        bootstrap_servers=kafka_options.bootstrap_servers,
+        consumer_group=kafka_options.consumer_group,
         num_consumers=options.num_consumers,
-        bootstrap_servers=options.bootstrap_servers,
-        consumer_group=options.consumer_group,
         topic_name=options.extraction_topic_name,
     )

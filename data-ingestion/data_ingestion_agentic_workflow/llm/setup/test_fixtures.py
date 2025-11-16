@@ -4,7 +4,7 @@ import pytest
 
 
 @pytest.fixture
-def mock_env_vars() -> Dict[str, str]:
+def mock_llm_options_env_vars() -> Dict[str, str]:
     """Fixture to provide mock environment variables.
 
     Returns:
@@ -19,7 +19,7 @@ def mock_env_vars() -> Dict[str, str]:
 
 
 @pytest.fixture
-def clear_settings_cache() -> Generator[None, None, None]:
+def clear_mock_llm_options_env_vars() -> Generator[None, None, None]:
     """Clear the settings module cache before each test."""
     from data_ingestion_agentic_workflow.llm.setup.llm_options import clear_llm_options_cache
 
