@@ -129,6 +129,10 @@ class CocktailsExtractionEventReceiver(IAsyncKafkaMessageProcessor):
                 if value is not None:
                     decoded_value = value.decode("utf-8")
                     json_array = json.loads(decoded_value)
+
+                    span = trace.get_current_span()
+                    span.set_attribute("cocktail_item_count", len(json_array))
+
                     self._logger.info(
                         "Received cocktail extraction message",
                         extra={
