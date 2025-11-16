@@ -20,7 +20,6 @@ def mock_env_vars() -> Dict[str, str]:
         "OTEL_SERVICE_NAME": "test-service",
         "OTEL_SERVICE_NAMESPACE": "test-namespace",
         "OTEL_OTLP_AUTH_HEADER": "Bearer test-token",
-        "OLLAMA_HOST": "http://localhost:11434",
     }
 
 

@@ -12,6 +12,8 @@ from pydantic import ValidationError
 
 from data_ingestion_agentic_workflow.agents.extraction_agent.ext_agent_options import get_ext_agent_options
 from data_ingestion_agentic_workflow.llm.markdown_converter.llm_markdown_converter import LLMMarkdownConverter
+from data_ingestion_agentic_workflow.llm.setup.llm_model_options import LLMModelOptions
+from data_ingestion_agentic_workflow.llm.setup.llm_options import get_llm_options
 from data_ingestion_agentic_workflow.models.cocktail_models import CocktailModel
 
 
@@ -71,10 +73,15 @@ class CocktailsExtractionEventReceiver(IAsyncKafkaMessageProcessor):
         )
 
         self._markdown_converter = LLMMarkdownConverter(
-            ollama_host=self._options.ollama_host,
-            langfuse_host=self._options.langfuse_host,
-            langfuse_public_key=self._options.langfuse_public_key,
-            langfuse_secret_key=self._options.langfuse_secret_key,
+            llm_options=get_llm_options(),
+            model_options=LLMModelOptions(
+                model="llama3.2:3b",
+                temperature=0.0,
+                num_predict=2024,
+                verbose=True,
+                timeout_seconds=180.0,
+                reasoning=False,
+            ),
         )
 
     @staticmethod

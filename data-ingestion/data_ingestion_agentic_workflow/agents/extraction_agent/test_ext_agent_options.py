@@ -34,7 +34,6 @@ class TestExtractionAgentOptions:
         assert options_instance.consumer_group == "test-consumer-group"
         assert options_instance.extraction_topic_name == "test-topic-ext"
         assert options_instance.embedding_topic_name == "test-topic-emb"
-        assert options_instance.ollama_host == "http://localhost:11434"
         assert options_instance.num_consumers == 1
 
     @pytest.mark.usefixtures("clear_settings_cache")
@@ -95,25 +94,6 @@ class TestExtractionAgentOptions:
             get_ext_agent_options()  # type: ignore[unused-ignore]
 
     @pytest.mark.usefixtures("clear_settings_cache")
-    def test_settings_raises_error_when_ollama_host_missing(
-        self,
-        mock_env_vars: Dict[str, str],
-        clear_settings_cache: Any,
-        mocker: MockerFixture,
-    ) -> None:
-        """Test that missing OLLAMA_HOST raises ValueError."""
-        mocker.patch.dict(
-            "os.environ",
-            {key: value for key, value in mock_env_vars.items() if key != "OLLAMA_HOST"},
-            clear=True,
-        )
-
-        with pytest.raises(ValueError, match="OLLAMA_HOST.*required"):
-            from data_ingestion_agentic_workflow.agents.extraction_agent.ext_agent_options import get_ext_agent_options
-
-            get_ext_agent_options()  # type: ignore[unused-ignore]
-
-    @pytest.mark.usefixtures("clear_settings_cache")
     def test_settings_with_env_file(
         self, clear_settings_cache: Generator[None, None, None], mocker: MockerFixture, tmp_path: Any
     ) -> None:
@@ -125,7 +105,6 @@ class TestExtractionAgentOptions:
             "KAFKA_EXTRACTION_TOPIC_NAME=file-topic-ext\n"
             "KAFKA_EMBEDDING_TOPIC_NAME=file-topic-emb\n"
             "KAFKA_NUM_CONSUMERS=2\n"
-            "OLLAMA_HOST=http://localhost:11434\n"
             "EXTRA_VAR=extra-value\n"  # good for testing pydantics extra="allow" feature
         )
 
@@ -147,7 +126,6 @@ class TestExtractionAgentOptions:
             assert settings.consumer_group == "file-consumer-group"
             assert settings.extraction_topic_name == "file-topic-ext"
             assert settings.embedding_topic_name == "file-topic-emb"
-            assert settings.ollama_host == "http://localhost:11434"
             assert settings.num_consumers == 2
         finally:
             os.chdir(original_dir)

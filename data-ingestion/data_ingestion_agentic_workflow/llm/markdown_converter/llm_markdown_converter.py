@@ -1,31 +1,42 @@
 import asyncio
-import os
 
 import httpx
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate
-from langchain_ollama import OllamaLLM
 from langfuse.langchain import CallbackHandler
 
 from data_ingestion_agentic_workflow.llm.markdown_converter.llm_markdown_converter_prompts import (
     md_converter_human_prompt,
     md_converter_sys_prompt,
 )
+from data_ingestion_agentic_workflow.llm.setup.llm_model_options import LLMModelOptions
+from data_ingestion_agentic_workflow.llm.setup.llm_options import LLMOptions
+from data_ingestion_agentic_workflow.llm.setup.ollama_utils import get_ollama_model_client
 
 
 class LLMMarkdownConverter:
-    def __init__(self, ollama_host: str, langfuse_host: str, langfuse_public_key: str, langfuse_secret_key: str):
-        self.llm = OllamaLLM(model="llama3.2:3b", base_url=ollama_host, temperature=0.1, num_predict=2024, verbose=True)
-        self._llm_timeout = 180.0
+    """A markdown to text converter using an LLM model."""
 
-        os.environ["LANGFUSE_BASE_URL"] = langfuse_host
-        os.environ["LANGFUSE_HOST"] = langfuse_host
-        os.environ["LANGFUSE_PUBLIC_KEY"] = langfuse_public_key
-        os.environ["LANGFUSE_SECRET_KEY"] = langfuse_secret_key
+    def __init__(self, llm_options: LLMOptions, model_options: LLMModelOptions) -> None:
+        """Initialize the LLMMarkdownConverter with LLM options and model settings.
 
-        self._langfuse_handler = CallbackHandler()
+        Args:
+            llm_options (LLMOptions): The LLM options for configuration.
+            model_options (LLMModelOptions): The model settings for configuration.
+        """
+        self.llm = get_ollama_model_client(llm_options, model_options)
+        self._llm_timeout = model_options.timeout_seconds or 60
+        self._langfuse_handler = CallbackHandler(update_trace=True)
 
     async def convert_markdown(self, markdown_text: str) -> str:
+        """Convert markdown text to plain text using the LLM.
+
+        Args:
+            markdown_text (str): The markdown text to convert.
+
+        Returns:
+            str: The converted plain text.
+        """
         prompt = ChatPromptTemplate.from_messages(
             [
                 ("system", md_converter_sys_prompt),
@@ -35,7 +46,7 @@ class LLMMarkdownConverter:
         chain = prompt | self.llm | StrOutputParser()
 
         try:
-            result = await chain.ainvoke(
+            result = await chain.with_config({"run_name": f"convert_markdown [{self.llm.model}]"}).ainvoke(
                 {"markdown": markdown_text}, timeout=self._llm_timeout, config={"callbacks": [self._langfuse_handler]}
             )
             self._langfuse_handler.client.flush()
