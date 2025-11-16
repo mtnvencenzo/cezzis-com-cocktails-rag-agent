@@ -58,9 +58,9 @@ class LLMMarkdownConverter:
 
             return result
 
-        except asyncio.TimeoutError:
-            raise TimeoutError(f"LLM call timed out after {self._llm_timeout} seconds")
+        except asyncio.TimeoutError as e:
+            raise TimeoutError(f"LLM call timed out after {self._llm_timeout} seconds") from e
         except httpx.HTTPError as e:
-            raise ConnectionError(f"HTTP error during LLM call: {e}")
+            raise ConnectionError(f"HTTP error during LLM call: {e}") from e
         except Exception as e:
-            raise RuntimeError(f"An error occurred during LLM call: {e}")
+            raise RuntimeError(f"An error occurred during LLM call: {e}") from e
