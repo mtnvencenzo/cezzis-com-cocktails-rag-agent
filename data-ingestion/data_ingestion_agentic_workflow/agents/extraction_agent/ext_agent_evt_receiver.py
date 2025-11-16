@@ -82,7 +82,7 @@ class CocktailsExtractionEventReceiver(IAsyncKafkaMessageProcessor):
                 temperature=0.0,
                 num_predict=2024,
                 verbose=True,
-                timeout_seconds=180.0,
+                timeout_seconds=180,
                 reasoning=False,
             ),
         )
@@ -277,7 +277,7 @@ class CocktailsExtractionEventReceiver(IAsyncKafkaMessageProcessor):
         )
 
     def _create_cocktail_processing_read_span(
-        self, tracer: trace.Tracer, span_name: str, msg: Message, cocktail_model: CocktailModel
+        self, tracer: trace.Tracer, span_name: str, cocktail_model: CocktailModel
     ) -> ContextManager[Span]:
         """Create a child span for an individual cocktail model processing.
 
@@ -289,28 +289,14 @@ class CocktailsExtractionEventReceiver(IAsyncKafkaMessageProcessor):
         Returns:
             ContextManager[Span]: A context manager that yields the created child span.
         """
-        # Extract trace context from Kafka message headers for distributed tracing
-        carrier: dict[str, str] = {}
-        headers = msg.headers()
-        if headers is not None:
-            for key, value in headers:
-                if isinstance(value, bytes):
-                    try:
-                        carrier[key] = value.decode("utf-8")
-                    except UnicodeDecodeError:
-                        self._logger.warning(f"Failed to decode header '{key}' as UTF-8, skipping")
-
-        # Extract parent context and create a span as a child of the API trace
-        parent_context = extract(carrier)
-
-        # Add Kafka-specific attributes to the span using OpenTelemetry semantic conventions
+        # Add cocktail-specific attributes to the span
         span_attributes: dict[str, str | int] = {
             "cocktail_id": cocktail_model.id,
         }
 
+        # Create a child span of the current active span (no context extraction needed)
         return tracer.start_as_current_span(
             span_name,
-            context=parent_context,
             attributes=span_attributes,
         )
 
@@ -332,7 +318,7 @@ class CocktailsExtractionEventReceiver(IAsyncKafkaMessageProcessor):
 
     async def _process_message(self, model: CocktailModel, msg: Message) -> None:
         with self._create_cocktail_processing_read_span(
-            self._tracer, "cocktail-extraction-item-processing", msg=msg, cocktail_model=model
+            self._tracer, "cocktail-extraction-item-processing", cocktail_model=model
         ):
             self._logger.info(
                 "Processing cocktail extraction message item",

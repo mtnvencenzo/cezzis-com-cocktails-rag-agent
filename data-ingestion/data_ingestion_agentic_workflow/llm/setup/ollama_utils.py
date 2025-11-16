@@ -4,7 +4,7 @@ from data_ingestion_agentic_workflow.llm.setup.llm_model_options import LLMModel
 from data_ingestion_agentic_workflow.llm.setup.llm_options import LLMOptions
 
 
-def get_ollama_model_client(llm_options: LLMOptions, llm_model_options: LLMModelOptions):
+def get_ollama_model_client(name: str, llm_options: LLMOptions, llm_model_options: LLMModelOptions):
     """Create and return an OllamaLLM client configured with the given LLM options and model settings.
 
     Args:
@@ -15,6 +15,7 @@ def get_ollama_model_client(llm_options: LLMOptions, llm_model_options: LLMModel
         OllamaLLM: The configured OllamaLLM client.
     """
     return OllamaLLM(
+        name=name,
         model=llm_model_options.model,
         base_url=llm_options.llm_host,
         verbose=llm_model_options.verbose or False,

@@ -12,7 +12,7 @@ class LLMModelOptions:
     model: str
     """Model name to use."""
 
-    timeout_seconds: float | None = 30.0
+    timeout_seconds: int | None = 30
     """Timeout for requests to the model."""
 
     verbose: bool | None = None
@@ -57,7 +57,7 @@ class LLMModelOptions:
 
     num_thread: int | None = None
     """Sets the number of threads to use during computation.
-    By default, the llm models default detection will be used.It is recommended to set this 
+    By default, the llm models default detection will be used. It is recommended to set this 
     value to the number of physical CPU cores your system has 
     (as opposed to the logical number of cores)."""
 
@@ -107,7 +107,7 @@ class LLMModelOptions:
     keep_alive: int | str | None = None
     """How long the model will stay loaded into memory."""
 
-    client_kwargs: dict | None = field(default_factory=dict)
+    client_kwargs: dict = field(default_factory=dict)
     """Additional kwargs to pass to the httpx clients. Pass headers in here.
 
     These arguments are passed to both synchronous and async clients.
@@ -116,7 +116,7 @@ class LLMModelOptions:
     to synchronous and asynchronous clients.
     """
 
-    async_client_kwargs: dict | None = field(default_factory=dict)
+    async_client_kwargs: dict = field(default_factory=dict)
     """Additional kwargs to merge with `client_kwargs` before passing to httpx client.
 
     These are clients unique to the async client; for shared args use `client_kwargs`.
@@ -124,7 +124,7 @@ class LLMModelOptions:
     For a full list of the params, see the [httpx documentation](https://www.python-httpx.org/api/#asyncclient).
     """
 
-    sync_client_kwargs: dict | None = field(default_factory=dict)
+    sync_client_kwargs: dict = field(default_factory=dict)
     """Additional kwargs to merge with `client_kwargs` before passing to httpx client.
 
     These are clients unique to the sync client; for shared args use `client_kwargs`.

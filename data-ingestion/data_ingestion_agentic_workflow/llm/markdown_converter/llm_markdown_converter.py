@@ -24,7 +24,10 @@ class LLMMarkdownConverter:
             llm_options (LLMOptions): The LLM options for configuration.
             model_options (LLMModelOptions): The model settings for configuration.
         """
-        self.llm = get_ollama_model_client(llm_options, model_options)
+        self.llm = get_ollama_model_client(
+            name=f"convert_markdown [{model_options.model}]", llm_options=llm_options, llm_model_options=model_options
+        )
+
         self._llm_timeout = model_options.timeout_seconds or 60
         self._langfuse_handler = CallbackHandler(update_trace=True)
 
@@ -37,16 +40,18 @@ class LLMMarkdownConverter:
         Returns:
             str: The converted plain text.
         """
+
         prompt = ChatPromptTemplate.from_messages(
             [
                 ("system", md_converter_sys_prompt),
                 ("human", md_converter_human_prompt),
             ]
         )
+
         chain = prompt | self.llm | StrOutputParser()
 
         try:
-            result = await chain.with_config({"run_name": f"convert_markdown [{self.llm.model}]"}).ainvoke(
+            result = await chain.with_config({"run_name": "data-ingestion-workflow"}).ainvoke(
                 {"markdown": markdown_text}, timeout=self._llm_timeout, config={"callbacks": [self._langfuse_handler]}
             )
             self._langfuse_handler.client.flush()
