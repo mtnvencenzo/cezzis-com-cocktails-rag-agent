@@ -178,13 +178,13 @@ class ChunkingAgentEventReceiver(BaseAgentEventReceiver):
                 "Sending cocktail chunking model to embedding topic",
                 extra={
                     "messaging.kafka.bootstrap_servers": self._kafka_consumer_settings.bootstrap_servers,
-                    "messaging.kafka.topic_name": self._options.embedding_topic_name,
+                    "messaging.kafka.topic_name": self._options.results_topic_name,
                     "cocktail.id": extraction_model.cocktail_model.id,
                 },
             )
 
             self.producer.send_and_wait(
-                topic=self._options.embedding_topic_name,
+                topic=self._options.consumer_topic_name,
                 key=extraction_model.cocktail_model.id,
                 message=desc or "".encode("utf-8"),
                 headers=get_propagation_headers(),

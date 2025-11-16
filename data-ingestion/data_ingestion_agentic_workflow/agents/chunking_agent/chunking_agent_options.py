@@ -10,8 +10,8 @@ class ChunkingAgentOptions(BaseSettings):
 
     Attributes:
         enabled (bool): Flag to enable or disable the chunking agent.
-        chunking_topic_name (str): Kafka chunking topic name.
-        embedding_topic_name (str): Kafka embedding topic name.
+        consumer_topic_name (str): Kafka chunking topic name.
+        results_topic_name (str): Kafka results topic name.
         num_consumers (int): Number of Kafka consumer processes to start.
     """
 
@@ -20,9 +20,9 @@ class ChunkingAgentOptions(BaseSettings):
     )
 
     enabled: bool = Field(default=True, validation_alias="CHUNKING_AGENT_ENABLED")
-    chunking_topic_name: str = Field(default="", validation_alias="CHUNKING_AGENT_KAFKA_TOPIC_NAME")
+    consumer_topic_name: str = Field(default="", validation_alias="CHUNKING_AGENT_KAFKA_TOPIC_NAME")
     num_consumers: int = Field(default=1, validation_alias="CHUNKING_AGENT_KAFKA_NUM_CONSUMERS")
-    embedding_topic_name: str = Field(default="", validation_alias="EMBEDDING_AGENT_KAFKA_TOPIC_NAME")
+    results_topic_name: str = Field(default="", validation_alias="CHUNKING_AGENT_KAFKA_RESULTS_TOPIC_NAME")
 
 
 _logger: logging.Logger = logging.getLogger("chunking_agent_options")
@@ -41,10 +41,10 @@ def get_chunking_agent_options() -> ChunkingAgentOptions:
         _chunking_agent_options = ChunkingAgentOptions()
 
         # Validate required configuration
-        if not _chunking_agent_options.chunking_topic_name:
+        if not _chunking_agent_options.consumer_topic_name:
             raise ValueError("CHUNKING_AGENT_KAFKA_TOPIC_NAME environment variable is required")
-        if not _chunking_agent_options.embedding_topic_name:
-            raise ValueError("EMBEDDING_AGENT_KAFKA_TOPIC_NAME environment variable is required")
+        if not _chunking_agent_options.results_topic_name:
+            raise ValueError("CHUNKING_AGENT_KAFKA_RESULTS_TOPIC_NAME environment variable is required")
         if not _chunking_agent_options.num_consumers or _chunking_agent_options.num_consumers < 1:
             raise ValueError("CHUNKING_AGENT_KAFKA_NUM_CONSUMERS environment variable must be a positive integer")
         _logger.info("Chunking agent options loaded successfully.")

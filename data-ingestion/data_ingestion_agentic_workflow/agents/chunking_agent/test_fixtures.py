@@ -11,9 +11,9 @@ def mock_env_vars() -> Dict[str, str]:
         Dict[str, str]: A dictionary of mock environment variables.
     """
     return {
-        "CHUNKING_AGENT_KAFKA_TOPIC_NAME": "test-topic-chunk",
+        "CHUNKING_AGENT_KAFKA_TOPIC_NAME": "test-topic-extraction",
         "CHUNKING_AGENT_KAFKA_NUM_CONSUMERS": "1",
-        "EMBEDDING_AGENT_KAFKA_TOPIC_NAME": "test-topic-emb",
+        "CHUNKING_AGENT_KAFKA_RESULTS_TOPIC_NAME": "test-topic-results",
     }
 
 
