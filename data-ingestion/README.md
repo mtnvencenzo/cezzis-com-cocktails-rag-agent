@@ -301,7 +301,7 @@ docker run -d \
   -e KAFKA_EXTRACTION_TOPIC_NAME=cocktails-update-topic \
   -e KAFKA_EMBEDDING_TOPIC_NAME=cocktails-embeddings-topic \
   -e KAFKA_NUM_CONSUMERS=1 \
-  -e OLLAMA_HOST=host.docker.internal:11434 \
+  -e LLM_HOST=http://host.docker.internal:11434 \
   --name cezzis-ingestion-agentic-workflow \
   cezzis-ingestion-agentic-workflow:latest
 ```
@@ -321,10 +321,14 @@ docker run -d \
   -e OTEL_OTLP_AUTH_HEADER="Bearer 00d164bd-2d3d-4d62-8280-e507637def73" \
   -e KAFKA_BOOTSTRAP_SERVERS=host.docker.internal:39092 \
   -e KAFKA_CONSUMER_GROUP=cezzis-ingestion-agentic-workflow \
-  -e KAFKA_EXTRACTION_TOPIC_NAME=cocktails-update-topic \
-  -e KAFKA_EMBEDDING_TOPIC_NAME=cocktails-embeddings-topic \
-  -e KAFKA_NUM_CONSUMERS=1 \
-  -e OLLAMA_HOST=host.docker.internal:11434 \
+  -e EXTRACTION_AGENT_KAFKA_TOPIC_NAME=cocktails-update-topic \
+  -e EXTRACTION_AGENT_KAFKA_NUM_CONSUMERS=1 \
+  -e EMBEDDING_AGENT_KAFKA_TOPIC_NAME=cocktails-embeddings-topic \
+  -e EMBEDDING_AGENT_KAFKA_NUM_CONSUMERS=1 \
+  -e OLLAMA_HOST=http://host.docker.internal:11434 \
+  -e LANGFUSE_HOST=https://app.langfuse.com \
+  -e LANGFUSE_PUBLIC_KEY=your-langfuse-public-key \
+  -e LANGFUSE_SECRET_KEY=your-langfuse-secret-key \
   --name cezzis-ingestion-agentic-workflow \
   acrveceusgloshared001.azurecr.io/cocktailsdataingestionagenticwf:latest
 ```

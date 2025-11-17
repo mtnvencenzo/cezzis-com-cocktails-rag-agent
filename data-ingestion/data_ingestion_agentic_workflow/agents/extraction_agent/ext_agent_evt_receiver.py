@@ -1,24 +1,23 @@
 import json
 import logging
-from typing import ContextManager
 
 from cezzis_kafka import IAsyncKafkaMessageProcessor, KafkaConsumerSettings, KafkaProducer, KafkaProducerSettings
 from cezzis_otel import get_propagation_headers
-from confluent_kafka import Consumer, KafkaError, Message
+from confluent_kafka import Message
 from opentelemetry import trace
-from opentelemetry.propagate import extract
-from opentelemetry.trace import Span
 from pydantic import ValidationError
 
+from data_ingestion_agentic_workflow.agents.base_agent_evt_receiver import BaseAgentEventReceiver
 from data_ingestion_agentic_workflow.agents.extraction_agent.ext_agent_options import get_ext_agent_options
 from data_ingestion_agentic_workflow.infra.kafka_options import KafkaOptions, get_kafka_options
 from data_ingestion_agentic_workflow.llm.markdown_converter.llm_markdown_converter import LLMMarkdownConverter
 from data_ingestion_agentic_workflow.llm.setup.llm_model_options import LLMModelOptions
 from data_ingestion_agentic_workflow.llm.setup.llm_options import get_llm_options
+from data_ingestion_agentic_workflow.models.cocktail_extraction_model import CocktailExtractionModel
 from data_ingestion_agentic_workflow.models.cocktail_models import CocktailModel
 
 
-class CocktailsExtractionEventReceiver(IAsyncKafkaMessageProcessor):
+class CocktailsExtractionEventReceiver(BaseAgentEventReceiver):
     """Concrete implementation of IAsyncKafkaMessageProcessor for processing cocktail extraction messages from Kafka.
 
     Attributes:
@@ -30,26 +29,8 @@ class CocktailsExtractionEventReceiver(IAsyncKafkaMessageProcessor):
         kafka_settings() -> KafkaConsumerSettings:
             Get the Kafka consumer settings.
 
-        consumer_creating() -> None:
-            Hook called when the consumer is being created.
-
-        consumer_created(consumer: Consumer | None) -> None:
-            Hook called after the consumer has been created.
-
-        consumer_subscribed() -> None:
-            Hook called after the consumer has subscribed to topics.
-
-        consumer_stopping() -> None:
-            Hook called when the consumer is stopping.
-
         message_received(msg: Message) -> None:
             Process a received Kafka message.
-
-        message_error_received(msg: Message) -> None:
-            Hook called when an error message is received.
-
-        message_partition_reached(msg: Message) -> None:
-            Hook called when a partition end is reached.
     """
 
     def __init__(self, kafka_consumer_settings: KafkaConsumerSettings) -> None:
@@ -61,17 +42,24 @@ class CocktailsExtractionEventReceiver(IAsyncKafkaMessageProcessor):
         Returns:
             None
         """
+        super().__init__(kafka_consumer_settings=kafka_consumer_settings)
 
         self._logger: logging.Logger = logging.getLogger("ext_agent_evt_processor")
         self._tracer = trace.get_tracer("ext_agent_evt_processor")
-        self._kafka_consumer_settings = kafka_consumer_settings
         self._options = get_ext_agent_options()
 
         kafka_options: KafkaOptions = get_kafka_options()
 
         self.producer = KafkaProducer(
             settings=KafkaProducerSettings(
-                bootstrap_servers=kafka_options.bootstrap_servers, on_delivery=self._on_delivered_to_embedding_topic
+                bootstrap_servers=kafka_options.bootstrap_servers,
+                on_delivery=lambda err, msg: (
+                    self._logger.error(f"Message delivery failed: {err}")
+                    if err
+                    else self._logger.info(
+                        f"Message delivered to {msg.topic()} [{msg.partition()}] at offset {msg.offset()}"
+                    )
+                ),
             )
         )
 
@@ -99,31 +87,9 @@ class CocktailsExtractionEventReceiver(IAsyncKafkaMessageProcessor):
         """
         return CocktailsExtractionEventReceiver(kafka_consumer_settings=kafka_settings)
 
-    def kafka_settings(self) -> KafkaConsumerSettings:
-        """Get the Kafka consumer settings.
-
-        Args:    None
-
-        Returns:
-            KafkaConsumerSettings: The Kafka consumer settings.
-        """
-        return self._kafka_consumer_settings
-
-    async def consumer_creating(self) -> None:
-        pass
-
-    async def consumer_created(self, consumer: Consumer | None) -> None:
-        pass
-
-    async def consumer_subscribed(self) -> None:
-        pass
-
-    async def consumer_stopping(self) -> None:
-        pass
-
     async def message_received(self, msg: Message) -> None:
         # Create a span for processing this Kafka message, linked to the API trace
-        with self._create_kafka_consumer_read_span(self._tracer, "cocktail-extraction-message-processing", msg):
+        with super().create_kafka_consumer_read_span(self._tracer, "cocktail-extraction-message-processing", msg):
             try:
                 value = msg.value()
                 if value is not None:
@@ -181,7 +147,7 @@ class CocktailsExtractionEventReceiver(IAsyncKafkaMessageProcessor):
                         # Process the individual cocktail message
                         # ----------------------------------------
                         try:
-                            await self._process_message(model=cocktail_model, msg=msg)
+                            await self._process_message(model=cocktail_model)
                         except Exception as e:
                             self._logger.error(
                                 "Error processing cocktail extraction message item",
@@ -221,104 +187,9 @@ class CocktailsExtractionEventReceiver(IAsyncKafkaMessageProcessor):
                     },
                 )
 
-    async def message_error_received(self, msg: Message) -> None:
-        pass
-
-    async def message_partition_reached(self, msg: Message) -> None:
-        pass
-
-    def _create_kafka_consumer_read_span(
-        self, tracer: trace.Tracer, span_name: str, msg: Message
-    ) -> ContextManager[Span]:
-        """Create a child span for Kafka message processing.
-
-        Args:
-            tracer (trace.Tracer): The OpenTelemetry tracer.
-            span_name (str): The name of the span.
-            msg (Message): The Kafka message object.
-
-        Returns:
-            ContextManager[Span]: A context manager that yields the created child span.
-        """
-        # Extract trace context from Kafka message headers for distributed tracing
-        carrier: dict[str, str] = {}
-        headers = msg.headers()
-        if headers is not None:
-            for key, value in headers:
-                if isinstance(value, bytes):
-                    try:
-                        carrier[key] = value.decode("utf-8")
-                    except UnicodeDecodeError:
-                        self._logger.warning(f"Failed to decode header '{key}' as UTF-8, skipping")
-
-        # Extract parent context and create a span as a child of the API trace
-        parent_context = extract(carrier)
-
-        # Add Kafka-specific attributes to the span using OpenTelemetry semantic conventions
-        span_attributes: dict[str, str | int] = {
-            "messaging.system": "kafka",
-            "messaging.destination.name": msg.topic() or "unknown",  # Updated to semantic convention
-            "messaging.operation": "process",
-        }
-
-        # Add optional attributes if available
-        partition = msg.partition()
-        if partition is not None:
-            span_attributes["messaging.kafka.partition"] = partition
-
-        offset = msg.offset()
-        if offset is not None:
-            span_attributes["messaging.kafka.offset"] = offset
-
-        return tracer.start_as_current_span(
-            span_name,
-            context=parent_context,
-            attributes=span_attributes,
-        )
-
-    def _create_cocktail_processing_read_span(
-        self, tracer: trace.Tracer, span_name: str, cocktail_model: CocktailModel
-    ) -> ContextManager[Span]:
-        """Create a child span for an individual cocktail model processing.
-
-        Args:
-            tracer (trace.Tracer): The OpenTelemetry tracer.
-            span_name (str): The name of the span.
-            cocktail_model (CocktailModel): The cocktail model object.
-
-        Returns:
-            ContextManager[Span]: A context manager that yields the created child span.
-        """
-        # Add cocktail-specific attributes to the span
-        span_attributes: dict[str, str | int] = {
-            "cocktail_id": cocktail_model.id,
-        }
-
-        # Create a child span of the current active span (no context extraction needed)
-        return tracer.start_as_current_span(
-            span_name,
-            attributes=span_attributes,
-        )
-
-    def _on_delivered_to_embedding_topic(self, err: KafkaError | None, msg: Message) -> None:
-        """Callback function to handle message delivery reports for the embedding topic.
-
-        Args:
-            err (KafkaError | None): The error if the message delivery failed, else None.
-            msg (Message): The Kafka message that was delivered.
-
-        Returns:
-            None
-
-        """
-        if err:
-            self._logger.error(f"Message delivery failed: {err}")
-        else:
-            self._logger.info(f"Message delivered to {msg.topic()} [{msg.partition()}] at offset {msg.offset()}")
-
-    async def _process_message(self, model: CocktailModel, msg: Message) -> None:
-        with self._create_cocktail_processing_read_span(
-            self._tracer, "cocktail-extraction-item-processing", cocktail_model=model
+    async def _process_message(self, model: CocktailModel) -> None:
+        with super().create_processing_read_span(
+            self._tracer, "cocktail-extraction-item-processing", span_attributes={"cocktail_id": model.id}
         ):
             self._logger.info(
                 "Processing cocktail extraction message item",
@@ -327,23 +198,26 @@ class CocktailsExtractionEventReceiver(IAsyncKafkaMessageProcessor):
                 },
             )
 
-            md_content = model.content or ""
-
-            desc = await self._markdown_converter.convert_markdown(md_content)
+            extraction_text = await self._markdown_converter.convert_markdown(model.content or "")
 
             self._logger.info(
-                "Sending cocktail extraction result message to embedding topic",
+                "Sending cocktail extraction model to chunking topic",
                 extra={
                     "messaging.kafka.bootstrap_servers": self._kafka_consumer_settings.bootstrap_servers,
-                    "messaging.kafka.topic_name": self._options.embedding_topic_name,
+                    "messaging.kafka.topic_name": self._options.results_topic_name,
                     "cocktail.id": model.id,
                 },
             )
 
+            extraction_model = CocktailExtractionModel(
+                cocktail_model=model,
+                extraction_text=(extraction_text or ""),
+            )
+
             self.producer.send_and_wait(
-                topic=self._options.embedding_topic_name,
+                topic=self._options.results_topic_name,
                 key=model.id,
-                message=desc or "".encode("utf-8"),
-                headers=get_propagation_headers(),  # Include trace context headers
+                message=extraction_model.as_serializable_json(),
+                headers=get_propagation_headers(),
                 timeout=30.0,
             )

@@ -33,5 +33,5 @@ def run_extraction_agent() -> Coroutine[Any, Any, None]:
         bootstrap_servers=kafka_options.bootstrap_servers,
         consumer_group=kafka_options.consumer_group,
         num_consumers=options.num_consumers,
-        topic_name=options.extraction_topic_name,
+        topic_name=options.consumer_topic_name,
     )
