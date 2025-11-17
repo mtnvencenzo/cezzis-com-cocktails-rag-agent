@@ -43,8 +43,8 @@ class ChunkingAgentEventReceiver(BaseAgentEventReceiver):
         """
         super().__init__(kafka_consumer_settings=kafka_consumer_settings)
 
-        self._logger: logging.Logger = logging.getLogger("chunking_agent_evt_receiver")
-        self._tracer = trace.get_tracer("chunking_agent_evt_receiver")
+        self._logger: logging.Logger = logging.getLogger("chunking_agent")
+        self._tracer = trace.get_tracer("chunking_agent")
         self._options = get_chunking_agent_options()
 
         kafka_options: KafkaOptions = get_kafka_options()

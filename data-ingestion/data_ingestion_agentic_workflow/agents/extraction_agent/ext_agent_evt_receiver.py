@@ -26,11 +26,11 @@ class CocktailsExtractionEventReceiver(BaseAgentEventReceiver):
         _tracer (trace.Tracer): OpenTelemetry tracer for creating spans.
 
     Methods:
-        kafka_settings() -> KafkaConsumerSettings:
-            Get the Kafka consumer settings.
-
         message_received(msg: Message) -> None:
             Process a received Kafka message.
+        CreateNew(kafka_settings: KafkaConsumerSettings) -> IAsyncKafkaMessageProcessor:
+            Factory method to create a new instance of CocktailsExtractionEventReceiver.
+
     """
 
     def __init__(self, kafka_consumer_settings: KafkaConsumerSettings) -> None:
@@ -44,8 +44,8 @@ class CocktailsExtractionEventReceiver(BaseAgentEventReceiver):
         """
         super().__init__(kafka_consumer_settings=kafka_consumer_settings)
 
-        self._logger: logging.Logger = logging.getLogger("ext_agent_evt_processor")
-        self._tracer = trace.get_tracer("ext_agent_evt_processor")
+        self._logger: logging.Logger = logging.getLogger("extraction_agent")
+        self._tracer = trace.get_tracer("extraction_agent")
         self._options = get_ext_agent_options()
 
         kafka_options: KafkaOptions = get_kafka_options()
