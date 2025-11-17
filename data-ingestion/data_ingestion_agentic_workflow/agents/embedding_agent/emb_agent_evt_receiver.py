@@ -1,12 +1,9 @@
 import json
 import logging
-from typing import ContextManager
 
 from cezzis_kafka import IAsyncKafkaMessageProcessor, KafkaConsumerSettings
 from confluent_kafka import Message
 from opentelemetry import trace
-from opentelemetry.propagate import extract
-from opentelemetry.trace import Span
 
 from data_ingestion_agentic_workflow.agents.base_agent_evt_receiver import BaseAgentEventReceiver
 from data_ingestion_agentic_workflow.agents.embedding_agent.emb_agent_options import get_emb_agent_options
@@ -60,14 +57,8 @@ class EmbeddingAgentEventReceiver(BaseAgentEventReceiver):
                 value = msg.value()
                 if value is not None:
                     self._logger.info(
-                        "Received cocktail embedding message",
-                        extra={
-                            "messaging.kafka.consumer_id": self._kafka_consumer_settings.consumer_id,
-                            "messaging.kafka.bootstrap_servers": self._kafka_consumer_settings.bootstrap_servers,
-                            "messaging.kafka.consumer_group": self._kafka_consumer_settings.consumer_group,
-                            "messaging.kafka.topic_name": self._kafka_consumer_settings.topic_name,
-                            "messaging.kafka.partition": msg.partition(),
-                        },
+                        msg="Received cocktail embedding message",
+                        extra={**super().get_kafka_attributes(msg)},
                     )
 
                     data = json.loads(value.decode("utf-8"))
@@ -78,14 +69,8 @@ class EmbeddingAgentEventReceiver(BaseAgentEventReceiver):
 
                     if not chunking_model.chunks or not chunking_model.cocktail_model:
                         self._logger.warning(
-                            "Received empty cocktail chunking model",
-                            extra={
-                                "messaging.kafka.consumer_id": self._kafka_consumer_settings.consumer_id,
-                                "messaging.kafka.bootstrap_servers": self._kafka_consumer_settings.bootstrap_servers,
-                                "messaging.kafka.consumer_group": self._kafka_consumer_settings.consumer_group,
-                                "messaging.kafka.topic_name": self._kafka_consumer_settings.topic_name,
-                                "messaging.kafka.partition": msg.partition(),
-                            },
+                            msg="Received empty cocktail chunking model",
+                            extra={**super().get_kafka_attributes(msg)},
                         )
                         return
 
@@ -95,24 +80,15 @@ class EmbeddingAgentEventReceiver(BaseAgentEventReceiver):
                     self._process_message(chunking_model=chunking_model)
                 else:
                     self._logger.warning(
-                        "Received cocktail embedding message with no value",
-                        extra={
-                            "messaging.kafka.consumer_id": self._kafka_consumer_settings.consumer_id,
-                            "messaging.kafka.bootstrap_servers": self._kafka_consumer_settings.bootstrap_servers,
-                            "messaging.kafka.consumer_group": self._kafka_consumer_settings.consumer_group,
-                            "messaging.kafka.topic_name": self._kafka_consumer_settings.topic_name,
-                            "messaging.kafka.partition": msg.partition(),
-                        },
+                        msg="Received cocktail embedding message with no value",
+                        extra={**super().get_kafka_attributes(msg)},
                     )
             except Exception as e:
                 self._logger.error(
-                    "Error processing cocktail embedding message",
+                    msg="Error processing cocktail embedding message",
+                    exc_info=True,
                     extra={
-                        "messaging.kafka.consumer_id": self._kafka_consumer_settings.consumer_id,
-                        "messaging.kafka.bootstrap_servers": self._kafka_consumer_settings.bootstrap_servers,
-                        "messaging.kafka.consumer_group": self._kafka_consumer_settings.consumer_group,
-                        "messaging.kafka.topic_name": self._kafka_consumer_settings.topic_name,
-                        "messaging.kafka.partition": msg.partition(),
+                        **super().get_kafka_attributes(msg),
                         "error": str(e),
                     },
                 )
@@ -124,14 +100,14 @@ class EmbeddingAgentEventReceiver(BaseAgentEventReceiver):
             span_attributes={"cocktail_id": chunking_model.cocktail_model.id},
         ):
             self._logger.info(
-                "Processing cocktail embedding message item",
+                msg="Processing cocktail embedding message item",
                 extra={
                     "cocktail.id": chunking_model.cocktail_model.id,
                 },
             )
 
             self._logger.info(
-                "Sending cocktail embedding result to vector database",
+                msg="Sending cocktail embedding result to vector database",
                 extra={
                     "messaging.kafka.bootstrap_servers": self._kafka_consumer_settings.bootstrap_servers,
                     "messaging.kafka.topic_name": self._options.consumer_topic_name,
