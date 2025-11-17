@@ -217,7 +217,7 @@ class CocktailsExtractionEventReceiver(BaseAgentEventReceiver):
             self.producer.send_and_wait(
                 topic=self._options.results_topic_name,
                 key=model.id,
-                message=json.dumps(extraction_model).encode("utf-8"),
+                message=extraction_model.as_serializable_json(),
                 headers=get_propagation_headers(),
                 timeout=30.0,
             )

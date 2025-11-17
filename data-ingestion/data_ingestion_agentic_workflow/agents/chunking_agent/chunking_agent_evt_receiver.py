@@ -9,10 +9,12 @@ from opentelemetry import trace
 from data_ingestion_agentic_workflow.agents.base_agent_evt_receiver import BaseAgentEventReceiver
 from data_ingestion_agentic_workflow.agents.chunking_agent.chunking_agent_options import get_chunking_agent_options
 from data_ingestion_agentic_workflow.infra.kafka_options import KafkaOptions, get_kafka_options
-from data_ingestion_agentic_workflow.llm.markdown_converter.llm_markdown_converter import LLMMarkdownConverter
+from data_ingestion_agentic_workflow.llm.content_chunking.llm_content_chunking import LLMContentChunker
 from data_ingestion_agentic_workflow.llm.setup.llm_model_options import LLMModelOptions
 from data_ingestion_agentic_workflow.llm.setup.llm_options import get_llm_options
+from data_ingestion_agentic_workflow.models.cocktail_chunking_model import CocktailChunkingModel
 from data_ingestion_agentic_workflow.models.cocktail_extraction_model import CocktailExtractionModel
+from data_ingestion_agentic_workflow.models.cocktail_models import CocktailModel
 
 
 class ChunkingAgentEventReceiver(BaseAgentEventReceiver):
@@ -60,7 +62,7 @@ class ChunkingAgentEventReceiver(BaseAgentEventReceiver):
             )
         )
 
-        self._markdown_converter = LLMMarkdownConverter(
+        self._content_chunker = LLMContentChunker(
             llm_options=get_llm_options(),
             model_options=LLMModelOptions(
                 model="llama3.2:3b",
@@ -68,7 +70,7 @@ class ChunkingAgentEventReceiver(BaseAgentEventReceiver):
                 num_predict=2024,
                 verbose=True,
                 timeout_seconds=180,
-                reasoning=True,
+                reasoning=False,
             ),
         )
 
@@ -100,7 +102,11 @@ class ChunkingAgentEventReceiver(BaseAgentEventReceiver):
                         },
                     )
 
-                    extraction_model: CocktailExtractionModel = json.loads(value.decode("utf-8"))
+                    data = json.loads(value.decode("utf-8"))
+                    extraction_model = CocktailExtractionModel(
+                        cocktail_model=CocktailModel.model_validate(data["cocktail_model"]),
+                        extraction_text=data["extraction_text"],
+                    )
 
                     if not extraction_model.extraction_text or not extraction_model.cocktail_model:
                         self._logger.warning(
@@ -172,7 +178,16 @@ class ChunkingAgentEventReceiver(BaseAgentEventReceiver):
                 },
             )
 
-            desc = await self._markdown_converter.convert_markdown(extraction_model.extraction_text)
+            chunks = await self._content_chunker.chunk_content(extraction_model.extraction_text)
+
+            if not chunks or len(chunks) == 0:
+                self._logger.warning(
+                    "No chunks were created from cocktail extraction text, skipping sending to embedding topic",
+                    extra={
+                        "cocktail.id": extraction_model.cocktail_model.id,
+                    },
+                )
+                return
 
             self._logger.info(
                 "Sending cocktail chunking model to embedding topic",
@@ -183,10 +198,15 @@ class ChunkingAgentEventReceiver(BaseAgentEventReceiver):
                 },
             )
 
+            chunking_model = CocktailChunkingModel(
+                cocktail_model=extraction_model.cocktail_model,
+                chunks=chunks,
+            )
+
             self.producer.send_and_wait(
-                topic=self._options.consumer_topic_name,
+                topic=self._options.results_topic_name,
                 key=extraction_model.cocktail_model.id,
-                message=desc or "".encode("utf-8"),
+                message=chunking_model.as_serializable_json(),
                 headers=get_propagation_headers(),
                 timeout=30.0,
             )
