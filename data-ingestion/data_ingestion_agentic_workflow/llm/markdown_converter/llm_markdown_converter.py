@@ -12,6 +12,7 @@ from data_ingestion_agentic_workflow.llm.markdown_converter.llm_markdown_convert
 from data_ingestion_agentic_workflow.llm.setup.llm_model_options import LLMModelOptions
 from data_ingestion_agentic_workflow.llm.setup.llm_options import LLMOptions
 from data_ingestion_agentic_workflow.llm.setup.ollama_utils import get_ollama_model_client
+from data_ingestion_agentic_workflow.models.cocktail_extraction_model import CocktailExtractionModel
 
 
 class LLMMarkdownConverter:
@@ -31,14 +32,11 @@ class LLMMarkdownConverter:
         self._llm_timeout = model_options.timeout_seconds or 60
         self._langfuse_handler = CallbackHandler(update_trace=True)
 
-    async def convert_markdown(self, markdown_text: str) -> str:
-        """Convert markdown text to plain text using the LLM.
+    async def convert_markdown(self, markdown_text: str) -> CocktailExtractionModel | None:
+        """Converts the given markdown text into the cocktail extraction model.
 
         Args:
             markdown_text (str): The markdown text to convert.
-
-        Returns:
-            str: The converted plain text.
         """
 
         prompt = ChatPromptTemplate.from_messages(
@@ -56,7 +54,7 @@ class LLMMarkdownConverter:
             )
             self._langfuse_handler.client.flush()
 
-            return result
+            return CocktailExtractionModel(extraction_text=result)
 
         except asyncio.TimeoutError as e:
             raise TimeoutError(f"LLM call timed out after {self._llm_timeout} seconds") from e

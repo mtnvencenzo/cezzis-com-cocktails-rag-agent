@@ -43,8 +43,8 @@ class ChunkingAgentEventReceiver(BaseAgentEventReceiver):
         """
         super().__init__(kafka_consumer_settings=kafka_consumer_settings)
 
-        self._logger: logging.Logger = logging.getLogger("chunking_agent_evt_receiver")
-        self._tracer = trace.get_tracer("chunking_agent_evt_receiver")
+        self._logger: logging.Logger = logging.getLogger("chunking_agent")
+        self._tracer = trace.get_tracer("chunking_agent")
         self._options = get_chunking_agent_options()
 
         kafka_options: KafkaOptions = get_kafka_options()
@@ -66,7 +66,7 @@ class ChunkingAgentEventReceiver(BaseAgentEventReceiver):
             llm_options=get_llm_options(),
             model_options=LLMModelOptions(
                 model="llama3.2:3b",
-                temperature=0.5,
+                temperature=0.0,
                 num_predict=2024,
                 verbose=True,
                 timeout_seconds=180,
@@ -92,14 +92,8 @@ class ChunkingAgentEventReceiver(BaseAgentEventReceiver):
                 value = msg.value()
                 if value is not None:
                     self._logger.info(
-                        "Received cocktail chunking agent message",
-                        extra={
-                            "messaging.kafka.consumer_id": self._kafka_consumer_settings.consumer_id,
-                            "messaging.kafka.bootstrap_servers": self._kafka_consumer_settings.bootstrap_servers,
-                            "messaging.kafka.consumer_group": self._kafka_consumer_settings.consumer_group,
-                            "messaging.kafka.topic_name": self._kafka_consumer_settings.topic_name,
-                            "messaging.kafka.partition": msg.partition(),
-                        },
+                        msg="Received cocktail chunking agent message",
+                        extra={**super().get_kafka_attributes(msg)},
                     )
 
                     data = json.loads(value.decode("utf-8"))
@@ -110,14 +104,8 @@ class ChunkingAgentEventReceiver(BaseAgentEventReceiver):
 
                     if not extraction_model.extraction_text or not extraction_model.cocktail_model:
                         self._logger.warning(
-                            "Received empty cocktail extraction text",
-                            extra={
-                                "messaging.kafka.consumer_id": self._kafka_consumer_settings.consumer_id,
-                                "messaging.kafka.bootstrap_servers": self._kafka_consumer_settings.bootstrap_servers,
-                                "messaging.kafka.consumer_group": self._kafka_consumer_settings.consumer_group,
-                                "messaging.kafka.topic_name": self._kafka_consumer_settings.topic_name,
-                                "messaging.kafka.partition": msg.partition(),
-                            },
+                            msg="Received empty cocktail extraction text",
+                            extra={**super().get_kafka_attributes(msg)},
                         )
                         return
 
@@ -128,39 +116,24 @@ class ChunkingAgentEventReceiver(BaseAgentEventReceiver):
                         await self._process_message(extraction_model=extraction_model)
                     except Exception as e:
                         self._logger.error(
-                            "Error processing cocktail chunking message item",
+                            msg="Error processing cocktail chunking message item",
                             exc_info=True,
                             extra={
-                                "messaging.kafka.consumer_id": self._kafka_consumer_settings.consumer_id,
-                                "messaging.kafka.bootstrap_servers": self._kafka_consumer_settings.bootstrap_servers,
-                                "messaging.kafka.consumer_group": self._kafka_consumer_settings.consumer_group,
-                                "messaging.kafka.topic_name": self._kafka_consumer_settings.topic_name,
-                                "messaging.kafka.partition": msg.partition(),
-                                "cocktail.id": extraction_model.cocktail_model.id,
+                                **super().get_kafka_attributes(msg),
                                 "error": str(e),
                             },
                         )
 
                 else:
                     self._logger.warning(
-                        "Received cocktail chunking message with no value",
-                        extra={
-                            "messaging.kafka.consumer_id": self._kafka_consumer_settings.consumer_id,
-                            "messaging.kafka.bootstrap_servers": self._kafka_consumer_settings.bootstrap_servers,
-                            "messaging.kafka.consumer_group": self._kafka_consumer_settings.consumer_group,
-                            "messaging.kafka.topic_name": self._kafka_consumer_settings.topic_name,
-                            "messaging.kafka.partition": msg.partition(),
-                        },
+                        msg="Received cocktail chunking message with no value",
+                        extra={**super().get_kafka_attributes(msg)},
                     )
             except Exception as e:
                 self._logger.error(
-                    "Error processing cocktail chunking message",
+                    msg="Error processing cocktail chunking message",
                     extra={
-                        "messaging.kafka.consumer_id": self._kafka_consumer_settings.consumer_id,
-                        "messaging.kafka.bootstrap_servers": self._kafka_consumer_settings.bootstrap_servers,
-                        "messaging.kafka.consumer_group": self._kafka_consumer_settings.consumer_group,
-                        "messaging.kafka.topic_name": self._kafka_consumer_settings.topic_name,
-                        "messaging.kafka.partition": msg.partition(),
+                        **super().get_kafka_attributes(msg),
                         "error": str(e),
                     },
                 )
@@ -169,20 +142,37 @@ class ChunkingAgentEventReceiver(BaseAgentEventReceiver):
         with super().create_processing_read_span(
             self._tracer,
             "cocktail-chunking-text-processing",
-            span_attributes={"cocktail_id": extraction_model.cocktail_model.id},
+            span_attributes={
+                "cocktail_id": extraction_model.cocktail_model.id if extraction_model.cocktail_model else "unknown"
+            },
         ):
+            if extraction_model.cocktail_model is None:
+                self._logger.warning(msg="Received null cocktail model in cocktail chunking message")
+                return
+
             self._logger.info(
-                "Processing cocktail chunking message item",
+                msg="Processing cocktail chunking message item",
                 extra={
                     "cocktail.id": extraction_model.cocktail_model.id,
                 },
             )
 
-            chunks = await self._content_chunker.chunk_content(extraction_model.extraction_text)
+            if extraction_model.extraction_text.strip() == "":
+                self._logger.warning(
+                    msg="Received empty extraction text in cocktail chunking message",
+                    extra={
+                        "cocktail.id": extraction_model.cocktail_model.id,
+                    },
+                )
+                return
+
+            chunks = await self._content_chunker.chunk_content(
+                extraction_model.extraction_text,
+            )
 
             if not chunks or len(chunks) == 0:
                 self._logger.warning(
-                    "No chunks were created from cocktail extraction text, skipping sending to embedding topic",
+                    msg="No chunks were created from cocktail extraction text, skipping sending to embedding topic",
                     extra={
                         "cocktail.id": extraction_model.cocktail_model.id,
                     },
@@ -190,7 +180,7 @@ class ChunkingAgentEventReceiver(BaseAgentEventReceiver):
                 return
 
             self._logger.info(
-                "Sending cocktail chunking model to embedding topic",
+                msg="Sending cocktail chunking model to embedding topic",
                 extra={
                     "messaging.kafka.bootstrap_servers": self._kafka_consumer_settings.bootstrap_servers,
                     "messaging.kafka.topic_name": self._options.results_topic_name,
@@ -210,3 +200,14 @@ class ChunkingAgentEventReceiver(BaseAgentEventReceiver):
                 headers=get_propagation_headers(),
                 timeout=30.0,
             )
+
+    def merge_chunks(self, chunks: list[str]) -> str:
+        """Merge a list of text chunks into a single string.
+
+        Args:
+            chunks (list[str]): List of text chunks to merge.
+
+        Returns:
+            str: Merged text.
+        """
+        return "\n".join(chunks)

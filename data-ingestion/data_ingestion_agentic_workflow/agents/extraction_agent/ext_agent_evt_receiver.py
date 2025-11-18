@@ -13,7 +13,6 @@ from data_ingestion_agentic_workflow.infra.kafka_options import KafkaOptions, ge
 from data_ingestion_agentic_workflow.llm.markdown_converter.llm_markdown_converter import LLMMarkdownConverter
 from data_ingestion_agentic_workflow.llm.setup.llm_model_options import LLMModelOptions
 from data_ingestion_agentic_workflow.llm.setup.llm_options import get_llm_options
-from data_ingestion_agentic_workflow.models.cocktail_extraction_model import CocktailExtractionModel
 from data_ingestion_agentic_workflow.models.cocktail_models import CocktailModel
 
 
@@ -26,11 +25,11 @@ class CocktailsExtractionEventReceiver(BaseAgentEventReceiver):
         _tracer (trace.Tracer): OpenTelemetry tracer for creating spans.
 
     Methods:
-        kafka_settings() -> KafkaConsumerSettings:
-            Get the Kafka consumer settings.
-
         message_received(msg: Message) -> None:
             Process a received Kafka message.
+        CreateNew(kafka_settings: KafkaConsumerSettings) -> IAsyncKafkaMessageProcessor:
+            Factory method to create a new instance of CocktailsExtractionEventReceiver.
+
     """
 
     def __init__(self, kafka_consumer_settings: KafkaConsumerSettings) -> None:
@@ -44,8 +43,8 @@ class CocktailsExtractionEventReceiver(BaseAgentEventReceiver):
         """
         super().__init__(kafka_consumer_settings=kafka_consumer_settings)
 
-        self._logger: logging.Logger = logging.getLogger("ext_agent_evt_processor")
-        self._tracer = trace.get_tracer("ext_agent_evt_processor")
+        self._logger: logging.Logger = logging.getLogger("extraction_agent")
+        self._tracer = trace.get_tracer("extraction_agent")
         self._options = get_ext_agent_options()
 
         kafka_options: KafkaOptions = get_kafka_options()
@@ -67,7 +66,7 @@ class CocktailsExtractionEventReceiver(BaseAgentEventReceiver):
             llm_options=get_llm_options(),
             model_options=LLMModelOptions(
                 model="llama3.2:3b",
-                temperature=0.0,
+                temperature=0.2,
                 num_predict=2024,
                 verbose=True,
                 timeout_seconds=180,
@@ -88,7 +87,6 @@ class CocktailsExtractionEventReceiver(BaseAgentEventReceiver):
         return CocktailsExtractionEventReceiver(kafka_consumer_settings=kafka_settings)
 
     async def message_received(self, msg: Message) -> None:
-        # Create a span for processing this Kafka message, linked to the API trace
         with super().create_kafka_consumer_read_span(self._tracer, "cocktail-extraction-message-processing", msg):
             try:
                 value = msg.value()
@@ -100,13 +98,9 @@ class CocktailsExtractionEventReceiver(BaseAgentEventReceiver):
                     span.set_attribute("cocktail_item_count", len(json_array))
 
                     self._logger.info(
-                        "Received cocktail extraction message",
+                        msg="Received cocktail extraction message",
                         extra={
-                            "messaging.kafka.consumer_id": self._kafka_consumer_settings.consumer_id,
-                            "messaging.kafka.bootstrap_servers": self._kafka_consumer_settings.bootstrap_servers,
-                            "messaging.kafka.consumer_group": self._kafka_consumer_settings.consumer_group,
-                            "messaging.kafka.topic_name": self._kafka_consumer_settings.topic_name,
-                            "messaging.kafka.partition": msg.partition(),
+                            **super().get_kafka_attributes(msg),
                             "cocktail_item_count": len(json_array),
                         },
                     )
@@ -116,14 +110,10 @@ class CocktailsExtractionEventReceiver(BaseAgentEventReceiver):
                             cocktail_model = CocktailModel(**item)
                         except ValidationError as ve:
                             self._logger.error(
-                                "Failed to parse cocktail extraction message item",
+                                msg="Failed to parse cocktail extraction message item",
                                 exc_info=True,
                                 extra={
-                                    "messaging.kafka.consumer_id": self._kafka_consumer_settings.consumer_id,
-                                    "messaging.kafka.bootstrap_servers": self._kafka_consumer_settings.bootstrap_servers,
-                                    "messaging.kafka.consumer_group": self._kafka_consumer_settings.consumer_group,
-                                    "messaging.kafka.topic_name": self._kafka_consumer_settings.topic_name,
-                                    "messaging.kafka.partition": msg.partition(),
+                                    **super().get_kafka_attributes(msg),
                                     "error": str(ve),
                                 },
                             )
@@ -132,14 +122,8 @@ class CocktailsExtractionEventReceiver(BaseAgentEventReceiver):
                         cocktail_id = cocktail_model.id
                         if cocktail_id == "unknown":
                             self._logger.warning(
-                                "Cocktail item missing 'Id' field, skipping",
-                                extra={
-                                    "messaging.kafka.consumer_id": self._kafka_consumer_settings.consumer_id,
-                                    "messaging.kafka.bootstrap_servers": self._kafka_consumer_settings.bootstrap_servers,
-                                    "messaging.kafka.consumer_group": self._kafka_consumer_settings.consumer_group,
-                                    "messaging.kafka.topic_name": self._kafka_consumer_settings.topic_name,
-                                    "messaging.kafka.partition": msg.partition(),
-                                },
+                                msg="Cocktail item missing 'Id' field, skipping",
+                                extra={**super().get_kafka_attributes(msg)},
                             )
                             continue
 
@@ -150,41 +134,23 @@ class CocktailsExtractionEventReceiver(BaseAgentEventReceiver):
                             await self._process_message(model=cocktail_model)
                         except Exception as e:
                             self._logger.error(
-                                "Error processing cocktail extraction message item",
+                                msg="Error processing cocktail extraction message item",
                                 exc_info=True,
                                 extra={
-                                    "messaging.kafka.consumer_id": self._kafka_consumer_settings.consumer_id,
-                                    "messaging.kafka.bootstrap_servers": self._kafka_consumer_settings.bootstrap_servers,
-                                    "messaging.kafka.consumer_group": self._kafka_consumer_settings.consumer_group,
-                                    "messaging.kafka.topic_name": self._kafka_consumer_settings.topic_name,
-                                    "messaging.kafka.partition": msg.partition(),
-                                    "cocktail.id": cocktail_id,
+                                    **super().get_kafka_attributes(msg),
                                     "error": str(e),
                                 },
                             )
                             continue
                 else:
                     self._logger.warning(
-                        "Received cocktail extraction message with no value",
-                        extra={
-                            "messaging.kafka.consumer_id": self._kafka_consumer_settings.consumer_id,
-                            "messaging.kafka.bootstrap_servers": self._kafka_consumer_settings.bootstrap_servers,
-                            "messaging.kafka.consumer_group": self._kafka_consumer_settings.consumer_group,
-                            "messaging.kafka.topic_name": self._kafka_consumer_settings.topic_name,
-                            "messaging.kafka.partition": msg.partition(),
-                        },
+                        msg="Received cocktail extraction message with no value",
+                        extra={**super().get_kafka_attributes(msg)},
                     )
-            except Exception as e:
+            except Exception:
                 self._logger.error(
-                    "Error processing cocktail extraction message",
-                    extra={
-                        "messaging.kafka.consumer_id": self._kafka_consumer_settings.consumer_id,
-                        "messaging.kafka.bootstrap_servers": self._kafka_consumer_settings.bootstrap_servers,
-                        "messaging.kafka.consumer_group": self._kafka_consumer_settings.consumer_group,
-                        "messaging.kafka.topic_name": self._kafka_consumer_settings.topic_name,
-                        "messaging.kafka.partition": msg.partition(),
-                        "error": str(e),
-                    },
+                    msg="Error processing cocktail extraction message",
+                    extra={**super().get_kafka_attributes(msg)},
                 )
 
     async def _process_message(self, model: CocktailModel) -> None:
@@ -192,16 +158,34 @@ class CocktailsExtractionEventReceiver(BaseAgentEventReceiver):
             self._tracer, "cocktail-extraction-item-processing", span_attributes={"cocktail_id": model.id}
         ):
             self._logger.info(
-                "Processing cocktail extraction message item",
+                msg="Processing cocktail extraction message item",
                 extra={
                     "cocktail.id": model.id,
                 },
             )
 
-            extraction_text = await self._markdown_converter.convert_markdown(model.content or "")
+            extraction_model = await self._markdown_converter.convert_markdown(model.content or "")
+
+            if extraction_model is None:
+                self._logger.warning(
+                    msg="LLM failed to convert markdown to cocktail extraction model",
+                    extra={
+                        "cocktail.id": model.id,
+                    },
+                )
+                return
+
+            if extraction_model.extraction_text.strip() == "":
+                self._logger.warning(
+                    msg="LLM returned empty extraction text",
+                    extra={
+                        "cocktail.id": model.id,
+                    },
+                )
+                return
 
             self._logger.info(
-                "Sending cocktail extraction model to chunking topic",
+                msg="Sending cocktail extraction model to chunking topic",
                 extra={
                     "messaging.kafka.bootstrap_servers": self._kafka_consumer_settings.bootstrap_servers,
                     "messaging.kafka.topic_name": self._options.results_topic_name,
@@ -209,10 +193,7 @@ class CocktailsExtractionEventReceiver(BaseAgentEventReceiver):
                 },
             )
 
-            extraction_model = CocktailExtractionModel(
-                cocktail_model=model,
-                extraction_text=(extraction_text or ""),
-            )
+            extraction_model.cocktail_model = model  # Ensure the cocktail_model is set since llm doesnt set it
 
             self.producer.send_and_wait(
                 topic=self._options.results_topic_name,

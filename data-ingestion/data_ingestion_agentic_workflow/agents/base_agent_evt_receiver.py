@@ -119,3 +119,19 @@ class BaseAgentEventReceiver(IAsyncKafkaMessageProcessor):
             span_name,
             attributes=span_attributes,
         )
+
+    def get_kafka_attributes(self, msg: Message) -> Mapping[str, object]:
+        """Get Kafka message attributes for logging.
+
+        Args:
+            msg (Message): The Kafka message object.
+        Returns:
+            Mapping[str, object]: A dictionary of Kafka message attributes.
+        """
+        return {
+            "messaging.kafka.consumer_id": self._kafka_consumer_settings.consumer_id,
+            "messaging.kafka.bootstrap_servers": self._kafka_consumer_settings.bootstrap_servers,
+            "messaging.kafka.consumer_group": self._kafka_consumer_settings.consumer_group,
+            "messaging.kafka.topic_name": self._kafka_consumer_settings.topic_name,
+            "messaging.kafka.partition": msg.partition(),
+        }

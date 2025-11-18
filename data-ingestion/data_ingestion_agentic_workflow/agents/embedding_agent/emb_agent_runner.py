@@ -5,8 +5,8 @@ from typing import Any
 
 from cezzis_kafka import spawn_consumers_async
 
-from data_ingestion_agentic_workflow.agents.embedding_agent.emb_agent_app_options import get_emb_agent_options
-from data_ingestion_agentic_workflow.agents.embedding_agent.emb_agent_evt_processor import CocktailsEmbeddingProcessor
+from data_ingestion_agentic_workflow.agents.embedding_agent.emb_agent_evt_receiver import EmbeddingAgentEventReceiver
+from data_ingestion_agentic_workflow.agents.embedding_agent.emb_agent_options import get_emb_agent_options
 from data_ingestion_agentic_workflow.infra.kafka_options import KafkaOptions, get_kafka_options
 
 logger: logging.Logger = logging.getLogger("emb_agent_runner")
@@ -28,9 +28,9 @@ def run_embedding_agent() -> Coroutine[Any, Any, None]:
         return asyncio.sleep(0)  # Return a no-op coroutine
 
     return spawn_consumers_async(
-        factory_type=CocktailsEmbeddingProcessor,
+        factory_type=EmbeddingAgentEventReceiver,
         bootstrap_servers=kafka_options.bootstrap_servers,
         consumer_group=kafka_options.consumer_group,
         num_consumers=options.num_consumers,
-        topic_name=options.embedding_topic_name,
+        topic_name=options.consumer_topic_name,
     )
