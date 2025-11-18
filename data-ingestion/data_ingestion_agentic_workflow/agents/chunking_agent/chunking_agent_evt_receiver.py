@@ -67,7 +67,7 @@ class ChunkingAgentEventReceiver(BaseAgentEventReceiver):
             model_options=LLMModelOptions(
                 model="llama3.2:3b",
                 temperature=0.0,
-                num_predict=2024,
+                num_predict=-1,
                 verbose=True,
                 timeout_seconds=180,
                 reasoning=False,
