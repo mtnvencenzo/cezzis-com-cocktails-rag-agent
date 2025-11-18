@@ -54,8 +54,12 @@ class LLMContentChunker:
         chain = prompt | self.llm | StrOutputParser()
 
         try:
-            result = await chain.with_config({"run_name": "data-ingestion-workflow-2"}).ainvoke(
-                {"content": extraction_text}, timeout=self._llm_timeout, config={"callbacks": [self._langfuse_handler]}
+            result = await chain.with_config({"run_name": "data-ingestion-workflow"}).ainvoke(
+                {
+                    "content": extraction_text,
+                },
+                timeout=self._llm_timeout,
+                config={"callbacks": [self._langfuse_handler]},
             )
             self._langfuse_handler.client.flush()
 

@@ -13,7 +13,6 @@ from data_ingestion_agentic_workflow.infra.kafka_options import KafkaOptions, ge
 from data_ingestion_agentic_workflow.llm.markdown_converter.llm_markdown_converter import LLMMarkdownConverter
 from data_ingestion_agentic_workflow.llm.setup.llm_model_options import LLMModelOptions
 from data_ingestion_agentic_workflow.llm.setup.llm_options import get_llm_options
-from data_ingestion_agentic_workflow.models.cocktail_extraction_model import CocktailExtractionModel
 from data_ingestion_agentic_workflow.models.cocktail_models import CocktailModel
 
 
@@ -67,7 +66,7 @@ class CocktailsExtractionEventReceiver(BaseAgentEventReceiver):
             llm_options=get_llm_options(),
             model_options=LLMModelOptions(
                 model="llama3.2:3b",
-                temperature=0.0,
+                temperature=0.2,
                 num_predict=2024,
                 verbose=True,
                 timeout_seconds=180,
@@ -128,14 +127,6 @@ class CocktailsExtractionEventReceiver(BaseAgentEventReceiver):
                             )
                             continue
 
-                        cocktail_id = cocktail_model.id
-                        if cocktail_id == "unknown":
-                            self._logger.warning(
-                                msg="Cocktail item missing 'Id' field, skipping",
-                                extra={**super().get_kafka_attributes(msg)},
-                            )
-                            continue
-
                         # ----------------------------------------
                         # Process the individual cocktail message
                         # ----------------------------------------
@@ -173,7 +164,25 @@ class CocktailsExtractionEventReceiver(BaseAgentEventReceiver):
                 },
             )
 
-            extraction_text = await self._markdown_converter.convert_markdown(model.content or "")
+            extraction_model = await self._markdown_converter.convert_markdown(model.content or "")
+
+            if extraction_model is None:
+                self._logger.warning(
+                    msg="LLM failed to convert markdown to cocktail extraction model",
+                    extra={
+                        "cocktail.id": model.id,
+                    },
+                )
+                return
+
+            if extraction_model.extraction_text.strip() == "":
+                self._logger.warning(
+                    msg="LLM returned empty extraction text",
+                    extra={
+                        "cocktail.id": model.id,
+                    },
+                )
+                return
 
             self._logger.info(
                 msg="Sending cocktail extraction model to chunking topic",
@@ -184,10 +193,7 @@ class CocktailsExtractionEventReceiver(BaseAgentEventReceiver):
                 },
             )
 
-            extraction_model = CocktailExtractionModel(
-                cocktail_model=model,
-                extraction_text=(extraction_text or ""),
-            )
+            extraction_model.cocktail_model = model  # Ensure the cocktail_model is set since llm doesnt set it
 
             self.producer.send_and_wait(
                 topic=self._options.results_topic_name,

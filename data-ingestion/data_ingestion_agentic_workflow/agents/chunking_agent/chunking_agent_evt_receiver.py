@@ -66,7 +66,7 @@ class ChunkingAgentEventReceiver(BaseAgentEventReceiver):
             llm_options=get_llm_options(),
             model_options=LLMModelOptions(
                 model="llama3.2:3b",
-                temperature=0.5,
+                temperature=0.0,
                 num_predict=2024,
                 verbose=True,
                 timeout_seconds=180,
@@ -142,8 +142,14 @@ class ChunkingAgentEventReceiver(BaseAgentEventReceiver):
         with super().create_processing_read_span(
             self._tracer,
             "cocktail-chunking-text-processing",
-            span_attributes={"cocktail_id": extraction_model.cocktail_model.id},
+            span_attributes={
+                "cocktail_id": extraction_model.cocktail_model.id if extraction_model.cocktail_model else "unknown"
+            },
         ):
+            if extraction_model.cocktail_model is None:
+                self._logger.warning(msg="Received null cocktail model in cocktail chunking message")
+                return
+
             self._logger.info(
                 msg="Processing cocktail chunking message item",
                 extra={
@@ -151,7 +157,18 @@ class ChunkingAgentEventReceiver(BaseAgentEventReceiver):
                 },
             )
 
-            chunks = await self._content_chunker.chunk_content(extraction_model.extraction_text)
+            if extraction_model.extraction_text.strip() == "":
+                self._logger.warning(
+                    msg="Received empty extraction text in cocktail chunking message",
+                    extra={
+                        "cocktail.id": extraction_model.cocktail_model.id,
+                    },
+                )
+                return
+
+            chunks = await self._content_chunker.chunk_content(
+                extraction_model.extraction_text,
+            )
 
             if not chunks or len(chunks) == 0:
                 self._logger.warning(
@@ -183,3 +200,14 @@ class ChunkingAgentEventReceiver(BaseAgentEventReceiver):
                 headers=get_propagation_headers(),
                 timeout=30.0,
             )
+
+    def merge_chunks(self, chunks: list[str]) -> str:
+        """Merge a list of text chunks into a single string.
+
+        Args:
+            chunks (list[str]): List of text chunks to merge.
+
+        Returns:
+            str: Merged text.
+        """
+        return "\n".join(chunks)
