@@ -200,14 +200,3 @@ class ChunkingAgentEventReceiver(BaseAgentEventReceiver):
                 headers=get_propagation_headers(),
                 timeout=30.0,
             )
-
-    def merge_chunks(self, chunks: list[str]) -> str:
-        """Merge a list of text chunks into a single string.
-
-        Args:
-            chunks (list[str]): List of text chunks to merge.
-
-        Returns:
-            str: Merged text.
-        """
-        return "\n".join(chunks)

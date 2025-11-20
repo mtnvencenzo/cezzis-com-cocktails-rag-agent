@@ -3,11 +3,18 @@ import logging
 
 from cezzis_kafka import IAsyncKafkaMessageProcessor, KafkaConsumerSettings
 from confluent_kafka import Message
+from langchain_huggingface.embeddings import HuggingFaceEndpointEmbeddings
+from langchain_qdrant import QdrantVectorStore
 from opentelemetry import trace
+from qdrant_client import QdrantClient
+from qdrant_client.http.models import Distance, FieldCondition, Filter, MatchValue, VectorParams
 
 from data_ingestion_agentic_workflow.agents.base_agent_evt_receiver import BaseAgentEventReceiver
 from data_ingestion_agentic_workflow.agents.embedding_agent.emb_agent_options import get_emb_agent_options
-from data_ingestion_agentic_workflow.models.cocktail_chunking_model import CocktailChunkingModel
+from data_ingestion_agentic_workflow.models.cocktail_chunking_model import (
+    CocktailChunkingModel,
+    CocktailDescriptionChunk,
+)
 from data_ingestion_agentic_workflow.models.cocktail_models import CocktailModel
 
 
@@ -51,7 +58,6 @@ class EmbeddingAgentEventReceiver(BaseAgentEventReceiver):
         return EmbeddingAgentEventReceiver(kafka_consumer_settings=kafka_settings)
 
     async def message_received(self, msg: Message) -> None:
-        # Create a span for processing this Kafka message, linked to the API trace
         with super().create_kafka_consumer_read_span(self._tracer, "cocktail-embedding-message-processing", msg):
             try:
                 value = msg.value()
@@ -64,7 +70,7 @@ class EmbeddingAgentEventReceiver(BaseAgentEventReceiver):
                     data = json.loads(value.decode("utf-8"))
                     chunking_model = CocktailChunkingModel(
                         cocktail_model=CocktailModel.model_validate(data["cocktail_model"]),
-                        chunks=data["chunks"],
+                        chunks=[CocktailDescriptionChunk.from_dict(chunk) for chunk in data["chunks"]],
                     )
 
                     if not chunking_model.chunks or not chunking_model.cocktail_model:
@@ -105,6 +111,52 @@ class EmbeddingAgentEventReceiver(BaseAgentEventReceiver):
                     "cocktail.id": chunking_model.cocktail_model.id,
                 },
             )
+
+            collection_name = "cocktails"
+
+            client = QdrantClient(url="http://localhost:6333", timeout=60)
+
+            existing_collections = [c.name for c in client.get_collections().collections]
+            if collection_name not in existing_collections:
+                client.create_collection(
+                    collection_name=collection_name,
+                    vectors_config=VectorParams(size=768, distance=Distance.COSINE),
+                )
+
+            vector_store = QdrantVectorStore(
+                client=client,
+                collection_name=collection_name,
+                embedding=HuggingFaceEndpointEmbeddings(model="http://localhost:8989"),
+            )
+
+            client.delete(
+                collection_name=collection_name,
+                points_selector=Filter(
+                    must=[FieldCondition(key="cocktail_id", match=MatchValue(value=chunking_model.cocktail_model.id))]
+                ),
+            )
+
+            result = vector_store.add_texts(
+                texts=[chunk.description for chunk in chunking_model.chunks],
+                metadatas=[
+                    {
+                        "cocktail_id": chunking_model.cocktail_model.id,
+                        "category": chunk.category,
+                        "description": chunk.description,
+                    }
+                    for chunk in chunking_model.chunks
+                ],
+                ids=chunking_model.get_chunk_uuids(),
+            )
+
+            if not result:
+                self._logger.warning(
+                    msg="No embedding result returned from HuggingFace endpoint",
+                    extra={
+                        "cocktail.id": chunking_model.cocktail_model.id,
+                    },
+                )
+                return
 
             self._logger.info(
                 msg="Sending cocktail embedding result to vector database",
