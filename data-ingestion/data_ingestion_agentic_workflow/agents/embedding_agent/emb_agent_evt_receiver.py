@@ -11,6 +11,8 @@ from qdrant_client.http.models import Distance, FieldCondition, Filter, MatchVal
 
 from data_ingestion_agentic_workflow.agents.base_agent_evt_receiver import BaseAgentEventReceiver
 from data_ingestion_agentic_workflow.agents.embedding_agent.emb_agent_options import get_emb_agent_options
+from data_ingestion_agentic_workflow.config.hugging_face_options import get_huggingface_options
+from data_ingestion_agentic_workflow.config.qdrant_options import get_qdrant_options
 from data_ingestion_agentic_workflow.models.cocktail_chunking_model import (
     CocktailChunkingModel,
     CocktailDescriptionChunk,
@@ -44,6 +46,8 @@ class EmbeddingAgentEventReceiver(BaseAgentEventReceiver):
         self._logger: logging.Logger = logging.getLogger("embedding_agent")
         self._tracer = trace.get_tracer("embedding_agent")
         self._options = get_emb_agent_options()
+        self._huggingface_options = get_huggingface_options()
+        self._qdrant_options = get_qdrant_options()
 
     @staticmethod
     def CreateNew(kafka_settings: KafkaConsumerSettings) -> IAsyncKafkaMessageProcessor:
@@ -112,11 +116,29 @@ class EmbeddingAgentEventReceiver(BaseAgentEventReceiver):
                 },
             )
 
-            collection_name = "cocktails"
+            chunks_to_embed = [chunk for chunk in chunking_model.chunks if chunk.description.strip() != ""]
 
-            client = QdrantClient(url="http://localhost:6333", timeout=60)
+            if not chunks_to_embed or len(chunks_to_embed) == 0:
+                self._logger.warning(
+                    msg="No valid chunks to embed for cocktail, skipping embedding process",
+                    extra={
+                        "cocktail.id": chunking_model.cocktail_model.id,
+                    },
+                )
+                return
 
+            client = QdrantClient(
+                url=self._qdrant_options.host,  # http://localhost:6333 | https://aca-vec-eus-glo-qdrant-001.proudfield-08e1f932.eastus.azurecontainerapps.io
+                api_key=self._qdrant_options.api_key,
+                port=self._qdrant_options.port,
+                https=self._qdrant_options.use_https,
+                prefer_grpc=False,
+                timeout=60,
+            )
+
+            collection_name = self._qdrant_options.collection_name
             existing_collections = [c.name for c in client.get_collections().collections]
+
             if collection_name not in existing_collections:
                 client.create_collection(
                     collection_name=collection_name,
@@ -126,7 +148,11 @@ class EmbeddingAgentEventReceiver(BaseAgentEventReceiver):
             vector_store = QdrantVectorStore(
                 client=client,
                 collection_name=collection_name,
-                embedding=HuggingFaceEndpointEmbeddings(model="http://localhost:8989"),
+                embedding=HuggingFaceEndpointEmbeddings(
+                    model=self._huggingface_options.inference_model,  # http://localhost:8989 | sentence-transformers/all-mpnet-base-v2
+                    huggingfacehub_api_token=self._huggingface_options.api_token,
+                    task="feature-extraction",
+                ),
             )
 
             client.delete(
@@ -137,16 +163,16 @@ class EmbeddingAgentEventReceiver(BaseAgentEventReceiver):
             )
 
             result = vector_store.add_texts(
-                texts=[chunk.description for chunk in chunking_model.chunks],
+                texts=[chunk.description for chunk in chunks_to_embed],
                 metadatas=[
                     {
                         "cocktail_id": chunking_model.cocktail_model.id,
                         "category": chunk.category,
                         "description": chunk.description,
                     }
-                    for chunk in chunking_model.chunks
+                    for chunk in chunks_to_embed
                 ],
-                ids=chunking_model.get_chunk_uuids(),
+                ids=[chunks_to_embed[i].to_uuid() for i in range(len(chunks_to_embed))],
             )
 
             if not result:

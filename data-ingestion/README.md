@@ -150,6 +150,7 @@ data-ingestion/
 ## 🚀 Development Setup
 
 ### 1) Prerequisites
+- **Ollama** 
 - **Python 3.12+** - Required for the agentic workflow
 - **Poetry** - For dependency management (automatically installs if using Make)
 - **Docker & Docker Compose** - For local Kafka and containerized testing
@@ -158,6 +159,11 @@ data-ingestion/
 
 ### 2) Quick Start
 ```bash
+# Install ollama
+curl -fsSL https://ollama.com/install.sh | sh
+ollama pull llama3.2:3b
+# ollama run llama3.2:3b
+
 # Clone and enter the project
 git clone https://github.com/mtnvencenzo/cezzis-com-cocktails-rag-agent.git
 cd cezzis-com-cocktails-rag-agent/data-ingestion

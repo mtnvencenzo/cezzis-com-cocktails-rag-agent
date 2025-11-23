@@ -19,7 +19,7 @@ class LLMOptions(BaseSettings):
         env_file=(".env", f".env.{os.environ.get('ENV')}"), env_file_encoding="utf-8", extra="allow"
     )
 
-    llm_host: str = Field(default="", validation_alias="LLM_HOST")
+    llm_host: str | None = Field(default=None, validation_alias="LLM_HOST")
     langfuse_host: str = Field(default="", validation_alias="LANGFUSE_BASE_URL")
     langfuse_public_key: str = Field(default="", validation_alias="LANGFUSE_PUBLIC_KEY")
     langfuse_secret_key: str = Field(default="", validation_alias="LANGFUSE_SECRET_KEY")
@@ -41,8 +41,6 @@ def get_llm_options() -> LLMOptions:
         _llm_options = LLMOptions()
 
         # Validate required configuration
-        if not _llm_options.llm_host:
-            raise ValueError("LLM_HOST environment variable is required")
         if _llm_options.langfuse_host:
             if not _llm_options.langfuse_public_key:
                 raise ValueError("LANGFUSE_PUBLIC_KEY environment variable is required when LANGFUSE_BASE_URL is set")

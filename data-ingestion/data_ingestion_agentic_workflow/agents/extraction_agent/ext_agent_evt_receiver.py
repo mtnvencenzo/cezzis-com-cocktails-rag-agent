@@ -1,19 +1,25 @@
 import json
 import logging
+from typing import cast
 
 from cezzis_kafka import IAsyncKafkaMessageProcessor, KafkaConsumerSettings, KafkaProducer, KafkaProducerSettings
 from cezzis_otel import get_propagation_headers
 from confluent_kafka import Message
+from langchain.agents import create_agent
+from langchain_core.messages import BaseMessage
 from opentelemetry import trace
 from pydantic import ValidationError
 
 from data_ingestion_agentic_workflow.agents.base_agent_evt_receiver import BaseAgentEventReceiver
 from data_ingestion_agentic_workflow.agents.extraction_agent.ext_agent_options import get_ext_agent_options
 from data_ingestion_agentic_workflow.infra.kafka_options import KafkaOptions, get_kafka_options
-from data_ingestion_agentic_workflow.llm.markdown_converter.llm_markdown_converter import LLMMarkdownConverter
 from data_ingestion_agentic_workflow.llm.setup.llm_model_options import LLMModelOptions
 from data_ingestion_agentic_workflow.llm.setup.llm_options import get_llm_options
+from data_ingestion_agentic_workflow.llm.setup.ollama_utils import get_ollama_chat_model
+from data_ingestion_agentic_workflow.models.cocktail_extraction_model import CocktailExtractionModel
 from data_ingestion_agentic_workflow.models.cocktail_models import CocktailModel
+from data_ingestion_agentic_workflow.prompts import md_converter_sys_prompt
+from data_ingestion_agentic_workflow.tools.markdown_converter.markdown_converter import convert_markdown
 
 
 class CocktailsExtractionEventReceiver(BaseAgentEventReceiver):
@@ -62,17 +68,19 @@ class CocktailsExtractionEventReceiver(BaseAgentEventReceiver):
             )
         )
 
-        self._markdown_converter = LLMMarkdownConverter(
+        self.llm = get_ollama_chat_model(
+            name="convert_markdown [llama3.2:3b]",
             llm_options=get_llm_options(),
-            model_options=LLMModelOptions(
+            llm_model_options=LLMModelOptions(
                 model="llama3.2:3b",
-                temperature=0.2,
-                num_predict=2024,
+                temperature=0.0,
+                num_predict=-1,
                 verbose=True,
-                timeout_seconds=180,
+                timeout_seconds=30,
                 reasoning=False,
             ),
         )
+        # self.llm.bind_tools([convert_markdown])
 
     @staticmethod
     def CreateNew(kafka_settings: KafkaConsumerSettings) -> IAsyncKafkaMessageProcessor:
@@ -164,16 +172,27 @@ class CocktailsExtractionEventReceiver(BaseAgentEventReceiver):
                 },
             )
 
-            extraction_model = await self._markdown_converter.convert_markdown(model.content or "")
+            agent = create_agent(
+                model=self.llm,
+                tools=[convert_markdown],
+                system_prompt=md_converter_sys_prompt,
+            )
 
-            if extraction_model is None:
-                self._logger.warning(
-                    msg="LLM failed to convert markdown to cocktail extraction model",
-                    extra={
-                        "cocktail.id": model.id,
-                    },
-                )
-                return
+            agent_result = await agent.ainvoke({"messages": [{"role": "user", "content": model.content or ""}]})
+
+            result_list = cast(list[BaseMessage], agent_result["messages"])
+            result_content = result_list[-1].content if result_list else ""
+
+            if isinstance(result_content, list):
+                # Join string elements, convert dicts to JSON strings
+                result_content = "\n".join(s if isinstance(s, str) else json.dumps(s) for s in result_content)
+            elif not isinstance(result_content, str):
+                result_content = str(result_content)
+
+            extraction_model = CocktailExtractionModel(
+                cocktail_model=model,
+                extraction_text=result_content,
+            )
 
             if extraction_model.extraction_text.strip() == "":
                 self._logger.warning(
@@ -192,8 +211,6 @@ class CocktailsExtractionEventReceiver(BaseAgentEventReceiver):
                     "cocktail.id": model.id,
                 },
             )
-
-            extraction_model.cocktail_model = model  # Ensure the cocktail_model is set since llm doesnt set it
 
             self.producer.send_and_wait(
                 topic=self._options.results_topic_name,

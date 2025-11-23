@@ -15,6 +15,9 @@ class CocktailDescriptionChunk:
     def from_dict(cls, data: dict):
         return cls(**data)
 
+    def to_uuid(self) -> str:
+        return str(uuid5(NAMESPACE_DNS, f"{self.category}-{self.description}"))
+
 
 @dataclass
 class CocktailChunkingModel:
@@ -31,7 +34,4 @@ class CocktailChunkingModel:
         return TypeAdapter(dict).dump_json(serializable_dict)
 
     def get_chunk_uuids(self) -> List[str]:
-        return [
-            str(uuid5(NAMESPACE_DNS, f"{self.cocktail_model.id}-{chunk.category.replace(' ', '-')}"))
-            for chunk in self.chunks
-        ]
+        return [chunk.to_uuid() for chunk in self.chunks]
