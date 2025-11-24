@@ -147,6 +147,7 @@ class EmbeddingAgentEventReceiver(BaseAgentEventReceiver):
                         collection_name=self._qdrant_options.collection_name,
                         vectors_config=VectorParams(size=self._qdrant_options.vector_size, distance=Distance.COSINE),
                     )
+                self._collection_exists = True
 
             vector_store = QdrantVectorStore(
                 client=self.qdrant_client,
