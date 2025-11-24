@@ -80,6 +80,12 @@ class CocktailsExtractionEventReceiver(BaseAgentEventReceiver):
                 reasoning=False,
             ),
         )
+
+        self.agent = create_agent(
+            model=self.llm,
+            tools=[convert_markdown],
+            system_prompt=md_converter_sys_prompt,
+        )
         # self.llm.bind_tools([convert_markdown])
 
     @staticmethod
@@ -172,19 +178,12 @@ class CocktailsExtractionEventReceiver(BaseAgentEventReceiver):
                 },
             )
 
-            agent = create_agent(
-                model=self.llm,
-                tools=[convert_markdown],
-                system_prompt=md_converter_sys_prompt,
-            )
-
-            agent_result = await agent.ainvoke({"messages": [{"role": "user", "content": model.content or ""}]})
+            agent_result = await self.agent.ainvoke({"messages": [{"role": "user", "content": model.content or ""}]})
 
             result_list = cast(list[BaseMessage], agent_result["messages"])
             result_content = result_list[-1].content if result_list else ""
 
             if isinstance(result_content, list):
-                # Join string elements, convert dicts to JSON strings
                 result_content = "\n".join(s if isinstance(s, str) else json.dumps(s) for s in result_content)
             elif not isinstance(result_content, str):
                 result_content = str(result_content)

@@ -48,6 +48,15 @@ class EmbeddingAgentEventReceiver(BaseAgentEventReceiver):
         self._options = get_emb_agent_options()
         self._huggingface_options = get_huggingface_options()
         self._qdrant_options = get_qdrant_options()
+        self._collection_exists: bool = False
+        self.qdrant_client = QdrantClient(
+            url=self._qdrant_options.host,  # http://localhost:6333 | https://aca-vec-eus-glo-qdrant-001.proudfield-08e1f932.eastus.azurecontainerapps.io
+            api_key=self._qdrant_options.api_key,
+            port=self._qdrant_options.port,
+            https=self._qdrant_options.use_https,
+            prefer_grpc=False,
+            timeout=60,
+        )
 
     @staticmethod
     def CreateNew(kafka_settings: KafkaConsumerSettings) -> IAsyncKafkaMessageProcessor:
@@ -127,27 +136,21 @@ class EmbeddingAgentEventReceiver(BaseAgentEventReceiver):
                 )
                 return
 
-            client = QdrantClient(
-                url=self._qdrant_options.host,  # http://localhost:6333 | https://aca-vec-eus-glo-qdrant-001.proudfield-08e1f932.eastus.azurecontainerapps.io
-                api_key=self._qdrant_options.api_key,
-                port=self._qdrant_options.port,
-                https=self._qdrant_options.use_https,
-                prefer_grpc=False,
-                timeout=60,
-            )
+            ## -------------------------------
+            ## Ensure Qdrant collection exists
+            ## -------------------------------
+            if not self._collection_exists:
+                existing_collections = [c.name for c in self.qdrant_client.get_collections().collections]
 
-            collection_name = self._qdrant_options.collection_name
-            existing_collections = [c.name for c in client.get_collections().collections]
-
-            if collection_name not in existing_collections:
-                client.create_collection(
-                    collection_name=collection_name,
-                    vectors_config=VectorParams(size=768, distance=Distance.COSINE),
-                )
+                if self._qdrant_options.collection_name not in existing_collections:
+                    self.qdrant_client.create_collection(
+                        collection_name=self._qdrant_options.collection_name,
+                        vectors_config=VectorParams(size=self._qdrant_options.vector_size, distance=Distance.COSINE),
+                    )
 
             vector_store = QdrantVectorStore(
-                client=client,
-                collection_name=collection_name,
+                client=self.qdrant_client,
+                collection_name=self._qdrant_options.collection_name,
                 embedding=HuggingFaceEndpointEmbeddings(
                     model=self._huggingface_options.inference_model,  # http://localhost:8989 | sentence-transformers/all-mpnet-base-v2
                     huggingfacehub_api_token=self._huggingface_options.api_token,
@@ -155,8 +158,8 @@ class EmbeddingAgentEventReceiver(BaseAgentEventReceiver):
                 ),
             )
 
-            client.delete(
-                collection_name=collection_name,
+            self.qdrant_client.delete(
+                collection_name=self._qdrant_options.collection_name,
                 points_selector=Filter(
                     must=[FieldCondition(key="cocktail_id", match=MatchValue(value=chunking_model.cocktail_model.id))]
                 ),

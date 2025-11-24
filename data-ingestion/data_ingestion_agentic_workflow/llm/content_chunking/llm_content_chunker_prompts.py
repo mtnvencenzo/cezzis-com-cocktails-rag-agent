@@ -38,7 +38,7 @@ cnt_chunker_sys_prompt = """
     3. Do not alter any textual content when categorizing; only categorize and format them as specified. 
     4. All content must be represented in at least one section but can be included in multiple sections if it is appropriate.
     5. Format the output as a JSON array of objects, where each category is represented in the array as an object contains two fields: "category" and "description". Ensure that the JSON is properly formatted and can be parsed without errors.
-    6. After categorizing the content, for categories that do not have content in them you must try your best to add relevatent content in them.  You should use your knowledge about cocktails to fill in the missing content. It should be consise and accurate and based on widely available information.
+    6. Do not add any new sentences or information that are not present in the original content. If a category has no relevant sentences, leave its "description" as an empty string.
     7. Do not provide any additional commentary or explanation outside of the JSON array.  The output must only be the array.
 
     Format:
