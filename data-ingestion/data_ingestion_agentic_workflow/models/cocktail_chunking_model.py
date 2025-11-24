@@ -1,6 +1,7 @@
 import dataclasses
 from dataclasses import dataclass
 from typing import List
+from uuid import NAMESPACE_DNS, uuid5
 
 from data_ingestion_agentic_workflow.models.cocktail_models import CocktailModel
 
@@ -9,6 +10,13 @@ from data_ingestion_agentic_workflow.models.cocktail_models import CocktailModel
 class CocktailDescriptionChunk:
     category: str
     description: str
+
+    @classmethod
+    def from_dict(cls, data: dict):
+        return cls(**data)
+
+    def to_uuid(self) -> str:
+        return str(uuid5(NAMESPACE_DNS, f"{self.category}-{self.description}"))
 
 
 @dataclass
@@ -24,3 +32,6 @@ class CocktailChunkingModel:
             "chunks": [dataclasses.asdict(chunk) for chunk in self.chunks],
         }
         return TypeAdapter(dict).dump_json(serializable_dict)
+
+    def get_chunk_uuids(self) -> List[str]:
+        return [chunk.to_uuid() for chunk in self.chunks]

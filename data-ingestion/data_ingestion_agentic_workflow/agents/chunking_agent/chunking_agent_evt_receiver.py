@@ -67,7 +67,7 @@ class ChunkingAgentEventReceiver(BaseAgentEventReceiver):
             model_options=LLMModelOptions(
                 model="llama3.2:3b",
                 temperature=0.0,
-                num_predict=2024,
+                num_predict=-1,
                 verbose=True,
                 timeout_seconds=180,
                 reasoning=False,
@@ -200,14 +200,3 @@ class ChunkingAgentEventReceiver(BaseAgentEventReceiver):
                 headers=get_propagation_headers(),
                 timeout=30.0,
             )
-
-    def merge_chunks(self, chunks: list[str]) -> str:
-        """Merge a list of text chunks into a single string.
-
-        Args:
-            chunks (list[str]): List of text chunks to merge.
-
-        Returns:
-            str: Merged text.
-        """
-        return "\n".join(chunks)

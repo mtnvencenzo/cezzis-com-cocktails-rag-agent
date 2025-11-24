@@ -30,7 +30,7 @@ class TestLLMOptions:
         assert options_instance.langfuse_host == "https://localhost:8080"
 
     @pytest.mark.usefixtures("clear_mock_llm_options_env_vars")
-    def test_settings_raises_error_when_llm_host_missing(
+    def test_settings_builds_when_llm_host_missing(
         self,
         mock_llm_options_env_vars: Dict[str, str],
         clear_mock_llm_options_env_vars: Generator[None, None, None],
@@ -42,8 +42,12 @@ class TestLLMOptions:
             clear=True,
         )
 
-        with pytest.raises(ValueError, match="LLM_HOST.*required"):
-            get_llm_options()
+        options_instance = get_llm_options()
+
+        assert options_instance.llm_host is None
+        assert options_instance.langfuse_secret_key == "sk-lf-"
+        assert options_instance.langfuse_public_key == "pk-lf-"
+        assert options_instance.langfuse_host == "https://localhost:8080"
 
     @pytest.mark.usefixtures("clear_mock_llm_options_env_vars")
     def test_settings_loads_when_langfuse_options_missing(
