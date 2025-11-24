@@ -179,9 +179,9 @@ class EmbeddingAgentEventReceiver(BaseAgentEventReceiver):
                 ids=[chunks_to_embed[i].to_uuid() for i in range(len(chunks_to_embed))],
             )
 
-            if not result:
+            if len(result) == 0:
                 self._logger.warning(
-                    msg="No embedding result returned from HuggingFace endpoint",
+                    msg="No embedding results returned",
                     extra={
                         "cocktail.id": chunking_model.cocktail_model.id,
                     },
