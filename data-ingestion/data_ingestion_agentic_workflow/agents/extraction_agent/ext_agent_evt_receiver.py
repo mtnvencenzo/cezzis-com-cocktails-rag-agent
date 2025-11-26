@@ -18,8 +18,10 @@ from data_ingestion_agentic_workflow.llm.setup.llm_options import get_llm_option
 from data_ingestion_agentic_workflow.llm.setup.ollama_utils import get_ollama_chat_model
 from data_ingestion_agentic_workflow.models.cocktail_extraction_model import CocktailExtractionModel
 from data_ingestion_agentic_workflow.models.cocktail_models import CocktailModel
-from data_ingestion_agentic_workflow.prompts import md_converter_sys_prompt
-from data_ingestion_agentic_workflow.tools.markdown_converter.markdown_converter import convert_markdown
+from data_ingestion_agentic_workflow.prompts import extraction_sys_prompt, extraction_user_prompt
+from data_ingestion_agentic_workflow.tools.emoji_remover import remove_emojis
+from data_ingestion_agentic_workflow.tools.html_tag_remover import remove_html_tags
+from data_ingestion_agentic_workflow.tools.markdown_remover import remove_markdown
 
 
 class CocktailsExtractionEventReceiver(BaseAgentEventReceiver):
@@ -69,10 +71,10 @@ class CocktailsExtractionEventReceiver(BaseAgentEventReceiver):
         )
 
         self.llm = get_ollama_chat_model(
-            name="convert_markdown [llama3.2:3b]",
+            name=f"convert_markdown [{self._options.model}]",
             llm_options=get_llm_options(),
             llm_model_options=LLMModelOptions(
-                model="llama3.2:3b",
+                model=self._options.model,
                 temperature=0.0,
                 num_predict=-1,
                 verbose=True,
@@ -81,12 +83,7 @@ class CocktailsExtractionEventReceiver(BaseAgentEventReceiver):
             ),
         )
 
-        self.agent = create_agent(
-            model=self.llm,
-            tools=[convert_markdown],
-            system_prompt=md_converter_sys_prompt,
-        )
-        # self.llm.bind_tools([convert_markdown])
+        self.agent = create_agent(model=self.llm, tools=[remove_markdown, remove_html_tags, remove_emojis])
 
     @staticmethod
     def CreateNew(kafka_settings: KafkaConsumerSettings) -> IAsyncKafkaMessageProcessor:
@@ -178,7 +175,14 @@ class CocktailsExtractionEventReceiver(BaseAgentEventReceiver):
                 },
             )
 
-            agent_result = await self.agent.ainvoke({"messages": [{"role": "user", "content": model.content or ""}]})
+            agent_result = await self.agent.ainvoke(
+                {
+                    "messages": [
+                        {"role": "system", "content": extraction_sys_prompt},
+                        {"role": "user", "content": extraction_user_prompt.format(input_text=model.content or "")},
+                    ]
+                }
+            )
 
             result_list = cast(list[BaseMessage], agent_result["messages"])
             result_content = result_list[-1].content if result_list else ""
