@@ -83,10 +83,7 @@ class CocktailsExtractionEventReceiver(BaseAgentEventReceiver):
             ),
         )
 
-        self.agent = create_agent(
-            model=self.llm,
-            tools=[remove_markdown, remove_html_tags, remove_emojis]
-        )
+        self.agent = create_agent(model=self.llm, tools=[remove_markdown, remove_html_tags, remove_emojis])
 
     @staticmethod
     def CreateNew(kafka_settings: KafkaConsumerSettings) -> IAsyncKafkaMessageProcessor:
@@ -182,7 +179,7 @@ class CocktailsExtractionEventReceiver(BaseAgentEventReceiver):
                 {
                     "messages": [
                         {"role": "system", "content": extraction_sys_prompt},
-                        {"role": "user", "content": extraction_user_prompt.format(input_text=model.content or "")}
+                        {"role": "user", "content": extraction_user_prompt.format(input_text=model.content or "")},
                     ]
                 }
             )
